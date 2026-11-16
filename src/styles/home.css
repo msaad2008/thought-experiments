@@ -353,12 +353,12 @@ h2 {
 .tile-sub {
   margin: 4px 0 14px;
   color: var(--text-2);
-  font-size: 15px;
+  font-size: 17px;
 }
 
 .tile-meta {
   margin-top: auto;
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 600;
   color: var(--gold);
   font-variant-numeric: tabular-nums;

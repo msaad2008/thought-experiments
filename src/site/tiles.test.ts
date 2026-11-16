@@ -1,6 +1,8 @@
 import { test, expect } from 'vitest';
 import { GAMES } from './games';
 import { renderTiles } from './tiles';
+import { ICONS } from '../art/icons';
+import { HERO_SVG } from '../art/hero';
 
 const gravity = GAMES.find((g) => g.id === 'gravity')!;
 
@@ -20,4 +22,10 @@ test('tile uses the registry gradient', () => {
   const html = renderTiles([gravity], () => 0);
   expect(html).toContain('#6a2a1c');
   expect(html).toContain('#2a1236');
+});
+
+test('svg ids are unique across all icons and the hero', () => {
+  const ids = [...Object.values(ICONS), HERO_SVG].join('').match(/\bid="[^"]+"/g) ?? [];
+  expect(ids.length).toBeGreaterThan(0);
+  expect(new Set(ids).size).toBe(ids.length);
 });
