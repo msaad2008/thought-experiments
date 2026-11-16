@@ -18,7 +18,7 @@ The guiding rule: every mechanic is physically correct, or the game says openly 
 
 ## For teachers
 
-The site is free, needs no sign-up, and collects no data about students. Adding `?classroom` to the address unlocks every level and saves nothing.
+The site is free and needs no sign-up. No accounts, no cookies, nothing that identifies anyone; we only count anonymous visits and finished levels. Adding `?classroom` to the address unlocks every level and saves nothing.
 
 ## Run locally
 
