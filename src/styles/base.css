@@ -6,19 +6,26 @@
   --gold: #ffd25e;
 }
 
+/* The gradient sits on html, which grows with the content, so it spans the
+   full page height on long pages. The fallback colour fills any overscroll. */
 html {
   min-height: 100%;
-  background: linear-gradient(180deg, var(--navy), var(--dusk));
+  background: linear-gradient(180deg, var(--navy), var(--dusk)) var(--navy);
+  color-scheme: dark;
   font-family: 'Inter Variable', system-ui, sans-serif;
 }
 
 body {
   margin: 0;
   min-height: 100vh;
+  min-height: 100dvh;
   color: var(--text);
   font-size: 17px;
-  /* Sparse, subtle star dots (decoration only) */
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cg fill='%23fff'%3E%3Ccircle cx='32' cy='48' r='1' opacity='.45'/%3E%3Ccircle cx='140' cy='210' r='.8' opacity='.3'/%3E%3Ccircle cx='250' cy='80' r='1.2' opacity='.4'/%3E%3Ccircle cx='330' cy='300' r='.8' opacity='.3'/%3E%3Ccircle cx='80' cy='340' r='1' opacity='.35'/%3E%3Ccircle cx='370' cy='140' r='.7' opacity='.25'/%3E%3C/g%3E%3C/svg%3E");
+  /* Sparse, subtle star dots (decoration only). Body's own background is
+     painted over html's gradient on body's full box (it does not propagate
+     to the canvas while html has a background), so the stars tile the whole
+     page. Two tile sizes so the repeat isn't noticeable. */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='577' height='577'%3E%3Cg fill='%23fff'%3E%3Ccircle cx='96' cy='170' r='.8' opacity='.3'/%3E%3Ccircle cx='300' cy='22' r='1' opacity='.35'/%3E%3Ccircle cx='470' cy='260' r='.9' opacity='.3'/%3E%3Ccircle cx='205' cy='440' r='1.1' opacity='.4'/%3E%3Ccircle cx='540' cy='520' r='.7' opacity='.25'/%3E%3C/g%3E%3C/svg%3E"), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cg fill='%23fff'%3E%3Ccircle cx='32' cy='48' r='1' opacity='.45'/%3E%3Ccircle cx='140' cy='210' r='.8' opacity='.3'/%3E%3Ccircle cx='250' cy='80' r='1.2' opacity='.4'/%3E%3Ccircle cx='330' cy='300' r='.8' opacity='.3'/%3E%3Ccircle cx='80' cy='340' r='1' opacity='.35'/%3E%3Ccircle cx='370' cy='140' r='.7' opacity='.25'/%3E%3C/g%3E%3C/svg%3E");
 }
 
 @media (prefers-reduced-motion: reduce) {

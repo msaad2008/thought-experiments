@@ -3,10 +3,72 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Thought Experiments</title>
+    <title>Thought Experiments: Physics you can play</title>
+    <meta
+      name="description"
+      content="Five short browser games, each built on one idea that broke classical physics: relativity, gravity, entanglement, uncertainty and particle collisions. Free, no sign-up."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Thought Experiments" />
+    <meta property="og:title" content="Thought Experiments: Physics you can play" />
+    <meta
+      property="og:description"
+      content="Five games. Five ideas that broke classical physics. Learn relativity, gravity, entanglement, uncertainty and particle collisions by playing."
+    />
+    <meta name="theme-color" content="#0d1433" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   </head>
   <body>
-    <h1>Thought Experiments</h1>
+    <a class="skip" href="#games">Skip to the games</a>
+
+    <header class="topbar">
+      <nav class="wrap topbar-in" aria-label="Main">
+        <a class="brand" href="/">Thought Experiments</a>
+        <div class="nav-links">
+          <a href="#games">Games</a>
+          <a href="/about/">About</a>
+        </div>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero wrap" aria-labelledby="hero-title">
+        <h1 id="hero-title" class="fade">Physics you can play.</h1>
+        <p class="lede fade">Five games. Five ideas that broke classical physics.</p>
+        <div class="hero-actions fade">
+          <a class="cta" href="#games">Start playing</a>
+          <p class="total" id="total" hidden></p>
+        </div>
+        <div class="hero-art fade" id="hero-art"></div>
+      </section>
+
+      <section class="games wrap" id="games" aria-labelledby="games-title">
+        <h2 id="games-title" class="fade">Pick a thought experiment.</h2>
+        <ul class="tiles" id="tiles"></ul>
+      </section>
+
+      <section class="why wrap fade" aria-labelledby="why-title">
+        <h2 id="why-title">Why these five?</h2>
+        <p>
+          Each game is built on one idea that broke classical physics, the rules that worked for centuries until
+          experiments proved them wrong. Moving clocks really do tick slower, and gravity is really curved space.
+          Two particles can stay linked across any distance, a particle's position and speed can't both be pinned
+          down, and smashing particles together turns energy into new ones. You won't learn these ideas by reading
+          about them; you'll learn them by playing until they click.
+        </p>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="wrap footer-in">
+        <p>Made by Muhammad Saad Ahmad</p>
+        <nav aria-label="Footer">
+          <a href="/about/">About</a>
+          <a href="https://github.com/msaad2008/thought-experiments">GitHub</a>
+        </nav>
+      </div>
+    </footer>
+
     <script type="module" src="/src/site/home.ts"></script>
     <script data-goatcounter="https://GOATCOUNTER_CODE.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
   </body>
