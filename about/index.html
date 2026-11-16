@@ -42,8 +42,8 @@
         <article class="idea">
           <h3>Antidote Run: special relativity</h3>
           <p>
-            Moving clocks run slow. The faster you travel, the more slowly time passes for you compared with
-            someone standing still. The size of the effect is the factor γ = 1/√(1−v²/c²), where v is your speed
+            A clock moving relative to you runs slow, as measured by you. In the game, the ship's clock ticks slower
+            than Earth's clocks during the trip, and when the ship comes home the crew really has aged less. The size of the effect is the factor γ = 1/√(1−v²/c²), where v is your speed
             and c is the speed of light. At everyday speeds γ is almost exactly 1, so you never notice it. Close to
             the speed of light it gets large.
           </p>
@@ -54,8 +54,9 @@
           <h3>Slingshot: gravity</h3>
           <p>
             Every mass pulls on every other mass. The pull gives an acceleration a = GM/r², where M is the mass of
-            the thing doing the pulling and r is the distance to its centre. Notice that it depends on mass, not on
-            how dense or big something is. The last levels add black holes, using a real approximation from
+            the thing doing the pulling and r is the distance to its centre. At a given distance from its centre, an
+            object's pull depends only on its mass, not on its density. A denser object is just smaller, so you can
+            fly closer to it, where the pull is stronger. The last levels add black holes, using a real approximation from
             general relativity, Einstein's theory of gravity.
           </p>
           <p class="simp"><strong>What the game simplifies:</strong> gravity is the Newtonian kind everywhere except the black-hole levels, and everything happens in 2D.</p>
@@ -64,12 +65,13 @@
         <article class="idea">
           <h3>Entangled Maze: entanglement</h3>
           <p>
-            Two entangled particles share one quantum state. If you measure both, the results are correlated: for
-            the pair in the game, the chance of getting opposite results is P(opposite) = cos²((a−b)/2), where a
-            and b are the angles of the two detectors. But nothing travels between them. No signal and no motion
-            goes from one particle to the other, so you can't use entanglement to send a message.
+            Two entangled particles share one quantum state. Each particle's own result is completely random, a
+            50/50 coin flip. Only when you compare both results does a pattern show up: for the pair in the game,
+            the chance of getting opposite results is P(opposite) = cos²((a−b)/2), where a and b are the angles
+            you measure at. Nothing travels between the particles. No signal and no motion goes from one to the
+            other, and because each result alone looks random, you can't use entanglement to send a message.
           </p>
-          <p class="simp"><strong>What the game simplifies:</strong> it uses one kind of entangled pair and perfect detectors.</p>
+          <p class="simp"><strong>What the game simplifies:</strong> the game uses an ideal pair of spin-½ particles (the half-angle in the formula comes from spin) and perfect detectors.</p>
         </article>
 
         <article class="idea">
@@ -87,7 +89,7 @@
           <p>
             Energy and mass are two sides of the same thing: E = γmc². When particles collide at high speed, some of
             their energy can turn into brand-new particles. Not every outcome is allowed, though. Conservation laws,
-            such as keeping the total electric charge the same, decide what can come out.
+            such as keeping the total electric charge the same, decide what can come out. Total energy, momentum and charge are always conserved.
           </p>
           <p class="simp"><strong>What the game simplifies:</strong> there is only a small set of particles, and most collisions have two particles coming out.</p>
         </article>
@@ -118,11 +120,16 @@
         </ul>
       </section>
 
-      <section aria-labelledby="made">
-        <h2 id="made">Made by Muhammad Saad Ahmad</h2>
+      <section aria-labelledby="progress">
+        <h2 id="progress">Your progress</h2>
         <p>Your progress is saved only in this browser. If you'd like to start over, you can clear it here.</p>
         <button type="button" class="reset" id="reset">Reset my progress</button>
         <p class="status" id="reset-status" role="status"></p>
+      </section>
+
+      <section aria-labelledby="made">
+        <h2 id="made">Made by</h2>
+        <p>Muhammad Saad Ahmad</p>
       </section>
     </main>
 
