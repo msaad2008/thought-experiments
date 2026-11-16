@@ -12,6 +12,11 @@ test('live tile links to its game and shows stars', () => {
   expect(html).toContain('★ 9/30');
 });
 
+test('live tile keeps classroom mode', () => {
+  const html = renderTiles([{ ...gravity, status: 'live', maxStars: 30 }], () => 0, '?classroom');
+  expect(html).toContain('href="/gravity/?classroom"');
+});
+
 test('soon tile is not a link', () => {
   const html = renderTiles([{ ...gravity, status: 'soon' }], () => 0);
   expect(html).toContain('Coming soon');

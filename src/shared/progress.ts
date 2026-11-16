@@ -12,6 +12,15 @@ export function isClassroom(search: string = location.search): boolean {
   return new URLSearchParams(search).has('classroom');
 }
 
+/** Keep classroom mode when following a same-site link. */
+export function withClassroom(href: string, search: string = location.search): string {
+  if (!isClassroom(search) || !href.startsWith('/') || href.startsWith('//')) return href;
+  const hashAt = href.indexOf('#');
+  const base = hashAt < 0 ? href : href.slice(0, hashAt);
+  const hash = hashAt < 0 ? '' : href.slice(hashAt);
+  return `${base}${base.includes('?') ? '&' : '?'}classroom${hash}`;
+}
+
 function defaultStore(): Storage | null {
   if (isClassroom()) return null;
   try {

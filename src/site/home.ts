@@ -6,6 +6,7 @@ import { HERO_SVG } from '../art/hero';
 import { loadProgress, starsEarned, totalStars } from '../shared/progress';
 import { GAMES } from './games';
 import { renderTiles } from './tiles';
+import { applyClassroomUi } from './classroom-ui';
 
 const $ = (id: string): HTMLElement | null => document.getElementById(id);
 
@@ -45,3 +46,5 @@ if (!reduce && 'IntersectionObserver' in window) {
   );
   document.querySelectorAll('.fade').forEach((el) => io.observe(el));
 }
+
+applyClassroomUi();

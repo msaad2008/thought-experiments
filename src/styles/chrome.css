@@ -186,3 +186,15 @@ a {
     box-shadow: 0 12px 32px -10px rgb(255 210 94 / 0.75);
   }
 }
+
+.topbar-in:has(.classroom-badge) {
+  flex-wrap: wrap;
+}
+
+.classroom-badge {
+  flex-basis: 100%;
+  margin-bottom: 6px;
+  font-size: 0.875rem;
+  color: var(--gold);
+  text-align: center;
+}

@@ -3,6 +3,7 @@ import '../styles/base.css';
 import '../styles/chrome.css';
 import '../styles/pages.css';
 import { circlePath, glow, orb } from '../art/shapes';
+import { applyClassroomUi } from './classroom-ui';
 
 // A lost satellite drifting beside a small planet. Flat fills, no outlines.
 const SVG =
@@ -31,3 +32,5 @@ const SVG =
 
 const art = document.getElementById('lost-art');
 if (art) art.innerHTML = SVG;
+
+applyClassroomUi();
