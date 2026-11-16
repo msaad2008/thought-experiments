@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>About: Thought Experiments</title>
+    <meta
+      name="description"
+      content="What Thought Experiments is, the five modern-physics ideas behind the games, and a note for teachers."
+    />
+    <meta name="theme-color" content="#0d1433" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+
+    <header class="topbar">
+      <nav class="wrap topbar-in" aria-label="Main">
+        <a class="brand" href="/">Thought Experiments</a>
+        <div class="nav-links">
+          <a href="/#games">Games</a>
+          <a href="/about/">About</a>
+        </div>
+      </nav>
+    </header>
+
+    <main id="main" class="wrap about">
+      <h1>About</h1>
+
+      <section aria-labelledby="what">
+        <h2 id="what">What this is</h2>
+        <p>
+          Thought Experiments is five short games. Each one is built around a single idea from modern physics, the
+          kind of idea that surprised scientists because it broke the rules they thought were solid. You don't read
+          about the idea first. You play, and the game makes you run into it until it makes sense.
+        </p>
+      </section>
+
+      <section aria-labelledby="ideas">
+        <h2 id="ideas">The five ideas</h2>
+
+        <article class="idea">
+          <h3>Antidote Run: special relativity</h3>
+          <p>
+            Moving clocks run slow. The faster you travel, the more slowly time passes for you compared with
+            someone standing still. The size of the effect is the factor γ = 1/√(1−v²/c²), where v is your speed
+            and c is the speed of light. At everyday speeds γ is almost exactly 1, so you never notice it. Close to
+            the speed of light it gets large.
+          </p>
+          <p class="simp"><strong>What the game simplifies:</strong> the speed of light is shrunk in the game world, so trips take minutes instead of years.</p>
+        </article>
+
+        <article class="idea">
+          <h3>Slingshot: gravity</h3>
+          <p>
+            Every mass pulls on every other mass. The pull gives an acceleration a = GM/r², where M is the mass of
+            the thing doing the pulling and r is the distance to its centre. Notice that it depends on mass, not on
+            how dense or big something is. The last levels add black holes, using a real approximation from
+            general relativity, Einstein's theory of gravity.
+          </p>
+          <p class="simp"><strong>What the game simplifies:</strong> gravity is the Newtonian kind everywhere except the black-hole levels, and everything happens in 2D.</p>
+        </article>
+
+        <article class="idea">
+          <h3>Entangled Maze: entanglement</h3>
+          <p>
+            Two entangled particles share one quantum state. If you measure both, the results are correlated: for
+            the pair in the game, the chance of getting opposite results is P(opposite) = cos²((a−b)/2), where a
+            and b are the angles of the two detectors. But nothing travels between them. No signal and no motion
+            goes from one particle to the other, so you can't use entanglement to send a message.
+          </p>
+          <p class="simp"><strong>What the game simplifies:</strong> it uses one kind of entangled pair and perfect detectors.</p>
+        </article>
+
+        <article class="idea">
+          <h3>Uncertain Fire: the uncertainty principle</h3>
+          <p>
+            You can't know both where a particle is and how fast it is moving as exactly as you like. The limit is
+            Δx·Δp ≥ ħ/2, where Δx is the uncertainty in position, Δp is the uncertainty in momentum (mass times
+            velocity), and ħ is a tiny constant of nature. Squeeze one down and the other has to grow.
+          </p>
+          <p class="simp"><strong>What the game simplifies:</strong> ħ is made enormous so that the effect matters for something as big as a ship.</p>
+        </article>
+
+        <article class="idea">
+          <h3>Collider: energy becomes matter</h3>
+          <p>
+            Energy and mass are two sides of the same thing: E = γmc². When particles collide at high speed, some of
+            their energy can turn into brand-new particles. Not every outcome is allowed, though. Conservation laws,
+            such as keeping the total electric charge the same, decide what can come out.
+          </p>
+          <p class="simp"><strong>What the game simplifies:</strong> there is only a small set of particles, and most collisions have two particles coming out.</p>
+        </article>
+
+        <p class="soon">Coming soon: the games are being released one at a time, so some of these aren't playable yet.</p>
+      </section>
+
+      <section aria-labelledby="teachers">
+        <h2 id="teachers">For teachers</h2>
+        <p>
+          The games are free, need no sign-up, and collect no data about students. They work on phones and
+          computers, and each one takes about 15 to 20 minutes.
+        </p>
+        <p>
+          Add <code>?classroom</code> to any link, for example <code>thoughtexperiments.app/?classroom</code>, to
+          unlock every level and save nothing. That suits shared school computers, where you don't want one
+          student's progress showing up for the next.
+        </p>
+      </section>
+
+      <section aria-labelledby="sources">
+        <h2 id="sources">Sources</h2>
+        <ul>
+          <li>Particle data: the Particle Data Group (pdg.lbl.gov).</li>
+          <li>Halliday, Resnick and Krane, <em>Physics</em>.</li>
+          <li>Taylor and Wheeler, <em>Spacetime Physics</em>.</li>
+          <li>Griffiths, <em>Introduction to Quantum Mechanics</em>.</li>
+        </ul>
+      </section>
+
+      <section aria-labelledby="made">
+        <h2 id="made">Made by Muhammad Saad Ahmad</h2>
+        <p>Your progress is saved only in this browser. If you'd like to start over, you can clear it here.</p>
+        <button type="button" class="reset" id="reset">Reset my progress</button>
+        <p class="status" id="reset-status" role="status"></p>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="wrap footer-in">
+        <p>Made by Muhammad Saad Ahmad</p>
+        <nav aria-label="Footer">
+          <a href="/about/">About</a>
+          <a href="https://github.com/msaad2008/thought-experiments">GitHub</a>
+        </nav>
+      </div>
+    </footer>
+
+    <script type="module" src="/src/site/about.ts"></script>
+    <script data-goatcounter="https://GOATCOUNTER_CODE.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+  </body>
+</html>

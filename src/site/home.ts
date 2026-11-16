@@ -1,5 +1,6 @@
 import '@fontsource-variable/inter';
 import '../styles/base.css';
+import '../styles/chrome.css';
 import '../styles/home.css';
 import { HERO_SVG } from '../art/hero';
 import { loadProgress, starsEarned, totalStars } from '../shared/progress';
