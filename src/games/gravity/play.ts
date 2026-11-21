@@ -86,6 +86,7 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
   const tray = el('div', 'gv-tray');
   tray.setAttribute('role', 'group');
   tray.setAttribute('aria-label', 'Bodies to place');
+  tray.dataset.n = String(types.length);
   const items = new Map<BodyType, { btn: HTMLButtonElement; count: HTMLSpanElement }>();
   for (const t of types) {
     const btn = el('button', 'gv-item');
@@ -151,6 +152,29 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
     launchBtn.className = sim ? 'btn-ghost' : 'cta';
     launchBtn.disabled = finished;
     resetBtn.disabled = !!sim || finished || placed.length === 0;
+  }
+
+  /**
+   * Phones (single column): size the sky so it, the hint, the tray and the
+   * buttons all fit the viewport height without scrolling (never below 280 px).
+   */
+  function fit(): void {
+    if (window.matchMedia?.('(min-width: 900px)').matches) {
+      sky.style.width = '';
+      return;
+    }
+    const host = root.closest('.view-host');
+    const padBottom = host ? parseFloat(getComputedStyle(host).paddingBottom) || 0 : 0;
+    const s = sky.getBoundingClientRect();
+    const rest = root.getBoundingClientRect().height - s.height; // gap + panel
+    const border = s.height - sky.clientHeight; // style.width sets the content box
+    const avail = window.innerHeight - (s.top + window.scrollY) - rest - padBottom;
+    sky.style.width = `${Math.max(280, Math.min(root.clientWidth, Math.floor(avail)) - border)}px`;
+  }
+
+  function onWindowResize(): void {
+    fit();
+    resize();
   }
 
   function resize(): void {
@@ -431,11 +455,12 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
   root.addEventListener('pointercancel', pointerCancel);
   root.addEventListener('keydown', keyDown);
   document.addEventListener('visibilitychange', onVisibility);
-  window.addEventListener('resize', resize);
+  window.addEventListener('resize', onWindowResize);
   const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(resize) : null;
   ro?.observe(sky);
 
   changed();
+  fit();
   resize();
   if (!document.hidden) raf = requestAnimationFrame(frame);
 
@@ -446,7 +471,7 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
     clearTimeout(winTimer);
     ro?.disconnect();
     document.removeEventListener('visibilitychange', onVisibility);
-    window.removeEventListener('resize', resize);
+    window.removeEventListener('resize', onWindowResize);
     ctx.stage.replaceChildren();
   };
 }

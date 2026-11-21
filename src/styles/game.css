@@ -319,7 +319,7 @@ button.cta:disabled {
 /* Slingshot play view: sky canvas, then hint, tray and buttons. */
 
 .view-host:has(.gv) {
-  padding-top: 12px;
+  padding-block: 12px;
 }
 
 .gv {
@@ -452,8 +452,6 @@ button.cta:disabled {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  /* Directly under the sky on phones, so Launch is on screen without scrolling. */
-  order: -1;
 }
 
 .gv-actions > button {
@@ -484,8 +482,28 @@ button.cta:disabled {
     flex: none;
     width: 320px;
   }
-  .gv-actions {
-    order: 0;
+}
+
+/* Phones, 3–4 bodies: one row of tray items, the count dot above the name,
+   so the whole panel fits under the sky. */
+@media (max-width: 899.98px) {
+  .gv-tray[data-n='3'],
+  .gv-tray[data-n='4'] {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    gap: 6px;
+  }
+  .gv-tray[data-n='3'] .gv-item,
+  .gv-tray[data-n='4'] .gv-item {
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    padding: 6px 4px;
+    border-radius: 16px;
+    line-height: 1.2;
+    text-align: center;
+    white-space: normal;
   }
 }
 
