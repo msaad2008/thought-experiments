@@ -8,21 +8,13 @@
       name="description"
       content="What Thought Experiments is, the five modern-physics ideas behind the games, and a note for teachers."
     />
-    <meta name="theme-color" content="#0d1433" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta property="og:url" content="https://thoughtexperiments.app/about/" />
+    <!-- @partial head -->
   </head>
   <body>
     <a class="skip" href="#main">Skip to content</a>
 
-    <header class="topbar">
-      <nav class="wrap topbar-in" aria-label="Main">
-        <a class="brand" href="/">Thought Experiments</a>
-        <div class="nav-links">
-          <a href="/#games">Games</a>
-          <a href="/about/">About</a>
-        </div>
-      </nav>
-    </header>
+    <!-- @partial topbar -->
 
     <main id="main" class="wrap about">
       <h1>About</h1>
@@ -57,7 +49,7 @@
             the thing doing the pulling and r is the distance to its centre. At a given distance from its centre, an
             object's pull depends only on its mass, not on its density. A denser object is just smaller, so you can
             fly closer to it, where the pull is stronger. The last levels add black holes, using a real approximation from
-            general relativity, Einstein's theory of gravity.
+            general relativity, Einstein's theory of gravity. <a href="/gravity/">Play Slingshot</a>: 10 levels, each worth up to 3 stars.
           </p>
           <p class="simp"><strong>What the game simplifies:</strong> gravity is the Newtonian kind everywhere except the black-hole levels, and everything happens in 2D.</p>
         </article>
@@ -133,17 +125,9 @@
       </section>
     </main>
 
-    <footer class="footer">
-      <div class="wrap footer-in">
-        <p>Made by Muhammad Saad Ahmad</p>
-        <nav aria-label="Footer">
-          <a href="/about/">About</a>
-          <a href="https://github.com/msaad2008/thought-experiments">GitHub</a>
-        </nav>
-      </div>
-    </footer>
+    <!-- @partial footer -->
 
     <script type="module" src="/src/site/about.ts"></script>
-    <script data-goatcounter="https://msaad2008.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+    <!-- @partial goatcounter -->
   </body>
 </html>

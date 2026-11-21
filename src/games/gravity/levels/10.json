@@ -1,0 +1,20 @@
+{
+  "id": "10",
+  "title": "Whirl",
+  "hint": "Place a body so the ship passes close to the hole: it can whip all the way round before reaching the beacon.",
+  "insight": "Close to a black hole the ship can whirl right round it, and a tiny change in its path makes a huge difference.",
+  "ship": { "x": 880, "y": 500, "vx": -87, "vy": -76 },
+  "goal": { "x": 489, "y": 183, "r": 40 },
+  "stars": [
+    { "x": 273, "y": 627 },
+    { "x": 355, "y": 715 },
+    { "x": 472, "y": 741 }
+  ],
+  "fixed": [
+    { "type": "blackHole", "x": 450, "y": 550 }
+  ],
+  "inventory": { "moon": 1, "brownDwarf": 1, "whiteDwarf": 1, "neutronStar": 1 },
+  "solution": [
+    { "type": "neutronStar", "x": 790, "y": 180 }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "id": "03",
+  "title": "Heavier",
+  "hint": "A brown dwarf has four times the mass of a moon: watch how much harder it bends the path.",
+  "insight": "Pull grows with mass: at the same distance, four times the mass gives four times the pull, so the path bends much more.",
+  "ship": { "x": 120, "y": 880, "vx": 0, "vy": -83 },
+  "goal": { "x": 572, "y": 110, "r": 40 },
+  "stars": [
+    { "x": 132, "y": 577 },
+    { "x": 217, "y": 313 },
+    { "x": 418, "y": 171 }
+  ],
+  "fixed": [],
+  "inventory": { "moon": 1, "brownDwarf": 1 },
+  "solution": [
+    { "type": "brownDwarf", "x": 310, "y": 390 }
+  ]
+}

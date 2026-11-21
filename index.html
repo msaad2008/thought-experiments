@@ -3,33 +3,27 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script>
+      if (!matchMedia('(prefers-reduced-motion: reduce)').matches && 'IntersectionObserver' in window)
+        document.documentElement.classList.add('fx');
+    </script>
     <title>Thought Experiments: Physics you can play</title>
     <meta
       name="description"
       content="Five short browser games, each built on one idea that broke classical physics: relativity, gravity, entanglement, uncertainty and particle collisions. Free, no sign-up."
     />
-    <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="Thought Experiments" />
     <meta property="og:title" content="Thought Experiments: Physics you can play" />
     <meta
       property="og:description"
       content="Five games. Five ideas that broke classical physics. Learn relativity, gravity, entanglement, uncertainty and particle collisions by playing."
     />
-    <meta name="theme-color" content="#0d1433" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta property="og:url" content="https://thoughtexperiments.app/" />
+    <!-- @partial head -->
   </head>
   <body>
     <a class="skip" href="#games">Skip to the games</a>
 
-    <header class="topbar">
-      <nav class="wrap topbar-in" aria-label="Main">
-        <a class="brand" href="/">Thought Experiments</a>
-        <div class="nav-links">
-          <a href="#games">Games</a>
-          <a href="/about/">About</a>
-        </div>
-      </nav>
-    </header>
+    <!-- @partial topbar -->
 
     <main>
       <section class="hero wrap" aria-labelledby="hero-title">
@@ -59,17 +53,9 @@
       </section>
     </main>
 
-    <footer class="footer">
-      <div class="wrap footer-in">
-        <p>Made by Muhammad Saad Ahmad</p>
-        <nav aria-label="Footer">
-          <a href="/about/">About</a>
-          <a href="https://github.com/msaad2008/thought-experiments">GitHub</a>
-        </nav>
-      </div>
-    </footer>
+    <!-- @partial footer -->
 
     <script type="module" src="/src/site/home.ts"></script>
-    <script data-goatcounter="https://msaad2008.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+    <!-- @partial goatcounter -->
   </body>
 </html>

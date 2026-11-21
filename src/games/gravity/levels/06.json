@@ -1,0 +1,18 @@
+{
+  "id": "06",
+  "title": "Neutron star",
+  "hint": "The neutron star is the densest body yet: skim close past it for a very tight turn.",
+  "insight": "A real neutron star packs more mass than the Sun into a ball about 20 km across, so close to it the pull is enormous and the ship turns very tightly.",
+  "ship": { "x": 140, "y": 140, "vx": 83, "vy": 62 },
+  "goal": { "x": 761, "y": 109, "r": 40 },
+  "stars": [
+    { "x": 500, "y": 387 },
+    { "x": 705, "y": 439 },
+    { "x": 764, "y": 268 }
+  ],
+  "fixed": [],
+  "inventory": { "whiteDwarf": 1, "neutronStar": 1 },
+  "solution": [
+    { "type": "neutronStar", "x": 690, "y": 410 }
+  ]
+}

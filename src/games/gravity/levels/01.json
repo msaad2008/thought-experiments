@@ -1,0 +1,18 @@
+{
+  "id": "01",
+  "title": "First bend",
+  "hint": "Place the moon near the ship's path: its gravity pulls on the ship and bends the path towards it.",
+  "insight": "Every mass pulls on your ship, so its path bends towards the moon, and the closer it passes, the harder the pull.",
+  "ship": { "x": 80, "y": 300, "vx": 120, "vy": 0 },
+  "goal": { "x": 937, "y": 414, "r": 40 },
+  "stars": [
+    { "x": 580, "y": 326 },
+    { "x": 703, "y": 354 },
+    { "x": 821, "y": 384 }
+  ],
+  "fixed": [],
+  "inventory": { "moon": 1 },
+  "solution": [
+    { "type": "moon", "x": 480, "y": 410 }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "id": "07",
+  "title": "Crowded sky",
+  "hint": "The ship feels every body at once, so plan a path that uses the pulls already there.",
+  "insight": "With many bodies, the ship always follows the sum of all their pulls, and a small change early on can make a big difference later.",
+  "ship": { "x": 90, "y": 520, "vx": 100, "vy": 0 },
+  "goal": { "x": 891, "y": 663, "r": 40 },
+  "stars": [
+    { "x": 301, "y": 509 },
+    { "x": 546, "y": 498 },
+    { "x": 760, "y": 602 }
+  ],
+  "fixed": [
+    { "type": "moon", "x": 330, "y": 300 },
+    { "type": "brownDwarf", "x": 520, "y": 560 },
+    { "type": "moon", "x": 760, "y": 330 }
+  ],
+  "inventory": { "moon": 1, "brownDwarf": 1, "whiteDwarf": 1, "neutronStar": 1 },
+  "solution": [
+    { "type": "whiteDwarf", "x": 740, "y": 230 },
+    { "type": "brownDwarf", "x": 420, "y": 190 }
+  ]
+}

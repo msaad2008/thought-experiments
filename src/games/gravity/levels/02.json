@@ -1,0 +1,19 @@
+{
+  "id": "02",
+  "title": "Two pulls",
+  "hint": "Use both moons: the ship feels both of their pulls at the same time.",
+  "insight": "Pulls add up like arrows: two moons pulling the same way bend the path more than one, while pulls in opposite directions partly cancel.",
+  "ship": { "x": 80, "y": 120, "vx": 80, "vy": 0 },
+  "goal": { "x": 881, "y": 480, "r": 40 },
+  "stars": [
+    { "x": 438, "y": 160 },
+    { "x": 612, "y": 246 },
+    { "x": 757, "y": 354 }
+  ],
+  "fixed": [],
+  "inventory": { "moon": 2 },
+  "solution": [
+    { "type": "moon", "x": 360, "y": 250 },
+    { "type": "moon", "x": 600, "y": 420 }
+  ]
+}

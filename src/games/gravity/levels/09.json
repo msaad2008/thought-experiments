@@ -1,0 +1,20 @@
+{
+  "id": "09",
+  "title": "Slow clock",
+  "hint": "Place a body so the ship swings round the black hole, and watch its clock fall behind.",
+  "insight": "Near a black hole time itself runs slower, so the closer the ship flew, the slower its clock ticked.",
+  "ship": { "x": 880, "y": 130, "vx": 0, "vy": 106 },
+  "goal": { "x": 709, "y": 110, "r": 40 },
+  "stars": [
+    { "x": 558, "y": 718 },
+    { "x": 409, "y": 704 },
+    { "x": 308, "y": 595 }
+  ],
+  "fixed": [
+    { "type": "blackHole", "x": 480, "y": 560 }
+  ],
+  "inventory": { "brownDwarf": 1, "whiteDwarf": 1, "neutronStar": 1 },
+  "solution": [
+    { "type": "whiteDwarf", "x": 900, "y": 790 }
+  ]
+}
