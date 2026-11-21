@@ -1,0 +1,448 @@
+/* Shared game UI: game bar, views, Physics sheet. Game-agnostic. */
+
+:root {
+  --accent: #ff7a3d;
+}
+
+.game {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.game-page {
+  overflow-x: hidden;
+}
+
+/* ---------- Game bar ---------- */
+
+.gamebar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: rgb(13 20 51 / 0.72);
+  -webkit-backdrop-filter: saturate(160%) blur(16px);
+  backdrop-filter: saturate(160%) blur(16px);
+  border-bottom: 1px solid rgb(255 255 255 / 0.07);
+}
+
+.gamebar-in {
+  justify-content: flex-start;
+  gap: 4px 12px;
+}
+
+.bar-back,
+.bar-physics,
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.bar-back {
+  font-size: 1.4rem;
+  margin-left: -10px;
+}
+
+.bar-title {
+  flex: 1;
+  min-width: 0;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bar-stars {
+  color: var(--gold);
+  font-weight: 600;
+}
+
+.bar-physics {
+  padding-inline: 10px;
+  margin-right: -10px;
+  color: var(--text-2);
+  font-size: 15px;
+  white-space: nowrap;
+}
+
+.bar-physics:hover {
+  color: var(--text);
+}
+
+/* ---------- Views ---------- */
+
+.view-host {
+  flex: 1;
+  padding-block: 24px 40px;
+  outline: none;
+}
+
+.view h1 {
+  margin: 0 0 20px;
+  font-size: clamp(1.7rem, 5vw, 2.4rem);
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 28px;
+}
+
+button.cta {
+  border: 0;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cta.small {
+  padding: 0 20px;
+  white-space: nowrap;
+}
+
+button.cta:disabled {
+  background: rgb(255 255 255 / 0.12);
+  color: var(--text-2);
+  box-shadow: none;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 0 24px;
+  border: 1.5px solid rgb(200 194 240 / 0.45);
+  border-radius: 999px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-ghost:hover {
+  border-color: var(--text-2);
+}
+
+/* Intro */
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  max-width: 520px;
+  margin-inline: auto;
+  padding-top: clamp(8px, 4vh, 40px);
+}
+
+.intro-art {
+  width: min(320px, 100%);
+}
+
+.intro-art svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.intro-text {
+  margin: 20px 0 0;
+  min-height: 4.5em;
+  font-size: 1.3rem;
+  line-height: 1.4;
+}
+
+.dots {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgb(200 194 240 / 0.3);
+}
+
+.dot.on {
+  background: var(--gold);
+}
+
+.intro .actions {
+  justify-content: center;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .intro-art.slide {
+    animation: slide-in 0.35s ease-out;
+  }
+  @keyframes slide-in {
+    from {
+      opacity: 0;
+      transform: translateX(24px);
+    }
+  }
+}
+
+/* Level select */
+
+.level-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.level-btn {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  width: 100%;
+  min-height: 96px;
+  padding: 14px 16px;
+  border: 1px solid rgb(255 255 255 / 0.12);
+  border-radius: 16px;
+  background: rgb(255 255 255 / 0.06);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.level-btn:not(:disabled):hover {
+  border-color: var(--accent);
+}
+
+.level-btn:disabled {
+  color: var(--text-2);
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.level-num {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.level-name {
+  font-size: 0.95rem;
+  color: var(--text-2);
+}
+
+.level-stars {
+  margin-top: auto;
+  color: var(--gold);
+  letter-spacing: 2px;
+}
+
+.level-lock {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+}
+
+/* Shop */
+
+.shop-stars {
+  margin: 0 0 16px;
+  color: var(--text-2);
+}
+
+.upgrade-list {
+  margin: 0 0 24px;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 12px;
+}
+
+.upgrade {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid rgb(255 255 255 / 0.12);
+  border-radius: 16px;
+  background: rgb(255 255 255 / 0.06);
+}
+
+.upgrade-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.upgrade-info span {
+  color: var(--text-2);
+}
+
+.upgrade-info .needs {
+  color: var(--gold);
+  font-size: 0.95rem;
+}
+
+.owned {
+  color: var(--gold);
+  font-weight: 600;
+}
+
+/* Play / end */
+
+.stage {
+  width: 100%;
+}
+
+.placeholder {
+  color: var(--text-2);
+}
+
+.end {
+  max-width: 560px;
+}
+
+.end-stars {
+  margin: 0 0 12px;
+  color: var(--gold);
+  font-size: 2.2rem;
+  letter-spacing: 6px;
+}
+
+.insight {
+  margin: 0;
+  font-size: 1.2rem;
+  line-height: 1.45;
+}
+
+/* ---------- Physics sheet ---------- */
+
+.sheet {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  color: var(--text);
+  background: linear-gradient(180deg, #151c45, #231650);
+  box-shadow: 0 -10px 50px rgb(0 0 0 / 0.5);
+  /* bottom sheet by default */
+  position: fixed;
+  inset: auto 0 0 0;
+  width: 100%;
+  max-width: none;
+  max-height: 85dvh;
+  border-radius: 20px 20px 0 0;
+  overflow: hidden;
+}
+
+.sheet[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.sheet::backdrop {
+  background: rgb(5 8 24 / 0.6);
+}
+
+@media (min-width: 768px) {
+  .sheet {
+    inset: 0 0 0 auto;
+    width: min(460px, 100%);
+    max-height: none;
+    height: 100dvh;
+    border-radius: 20px 0 0 20px;
+    box-shadow: -10px 0 50px rgb(0 0 0 / 0.5);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .sheet[open] {
+    animation: sheet-up 0.25s ease-out;
+  }
+  @media (min-width: 768px) {
+    .sheet[open] {
+      animation-name: sheet-left;
+    }
+  }
+  @keyframes sheet-up {
+    from {
+      transform: translateY(40px);
+      opacity: 0;
+    }
+  }
+  @keyframes sheet-left {
+    from {
+      transform: translateX(40px);
+      opacity: 0;
+    }
+  }
+}
+
+.sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 8px 8px 20px;
+  border-bottom: 1px solid rgb(255 255 255 / 0.08);
+}
+
+.sheet-head h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.sheet-body {
+  overflow-y: auto;
+  padding: 8px 20px 28px;
+  overscroll-behavior: contain;
+}
+
+.sheet-body h3 {
+  margin: 24px 0 6px;
+  font-size: 1.1rem;
+  color: var(--gold);
+}
+
+.sheet-body p,
+.sheet-body li {
+  font-size: 17px;
+  line-height: 1.55;
+}
+
+.sheet-body p {
+  margin: 8px 0;
+}
+
+.sheet-body .eq {
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 1.05rem;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.sheet-body ul {
+  margin: 8px 0;
+  padding-left: 22px;
+}

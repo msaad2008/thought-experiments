@@ -29,6 +29,7 @@ export default defineConfig({
       input: {
         main: 'index.html',
         about: 'about/index.html',
+        gravity: 'gravity/index.html',
         notFound: '404.html',
       },
     },
