@@ -452,6 +452,8 @@ button.cta:disabled {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
+  /* Directly under the sky on phones, so Launch is on screen without scrolling. */
+  order: -1;
 }
 
 .gv-actions > button {
@@ -481,6 +483,9 @@ button.cta:disabled {
   .gv-panel {
     flex: none;
     width: 320px;
+  }
+  .gv-actions {
+    order: 0;
   }
 }
 
