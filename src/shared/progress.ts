@@ -52,7 +52,11 @@ export function loadProgress(game: GameId, store?: Storage | null): GameProgress
     if (!p || typeof p !== 'object') return empty();
     return {
       best: p.best && typeof p.best === 'object' && !Array.isArray(p.best)
-        ? Object.fromEntries(Object.entries(p.best).filter(([, v]) => Number.isFinite(v)))
+        ? Object.fromEntries(
+            Object.entries(p.best)
+              .filter((e): e is [string, number] => typeof e[1] === 'number' && Number.isFinite(e[1]) && e[1] >= 0)
+              .map(([k, v]) => [k, Math.min(3, Math.floor(v))]),
+          )
         : {},
       spent: typeof p.spent === 'number' && Number.isFinite(p.spent) && p.spent >= 0 ? p.spent : 0,
       upgrades: Array.isArray(p.upgrades) ? p.upgrades.filter((u): u is string => typeof u === 'string') : [],

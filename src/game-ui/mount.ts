@@ -85,7 +85,9 @@ export function mountGame(cfg: GameConfig, root: HTMLElement): void {
 
   // ----- helpers -----
   function refreshBar(): void {
-    title.textContent = label ? `${cfg.title} · ${label}` : cfg.title;
+    // On narrow screens the CSS hides the game name, so the level number always shows.
+    if (label) title.replaceChildren(el('span', 'bar-game', `${cfg.title} · `), label);
+    else title.textContent = cfg.title;
     stars.textContent = `★ ${starsEarned(progress)}`;
     stars.setAttribute('aria-label', `${starsEarned(progress)} stars earned`);
   }
@@ -107,7 +109,8 @@ export function mountGame(cfg: GameConfig, root: HTMLElement): void {
   }
 
   // ----- views -----
-  function showIntro(): void {
+  /** `fromSelect`: replayed from "How it works", so it returns there. */
+  function showIntro(fromSelect = false): void {
     const view = el('section', 'view intro');
     let i = 0;
     const art = el('div', 'intro-art');
@@ -136,7 +139,9 @@ export function mountGame(cfg: GameConfig, root: HTMLElement): void {
     }
     function finish(): void {
       persistIntroSeen();
-      showSelect();
+      // Spec §3: on a first visit the intro leads straight into level 1.
+      if (!fromSelect && Object.keys(progress.best).length === 0) play(0);
+      else showSelect();
     }
     render();
     show(view);
@@ -170,7 +175,7 @@ export function mountGame(cfg: GameConfig, root: HTMLElement): void {
     const row = el('div', 'actions');
     row.append(
       button('Upgrades', 'btn-ghost', () => showShop()),
-      button('How it works', 'btn-ghost', () => showIntro()),
+      button('How it works', 'btn-ghost', () => showIntro(true)),
     );
     view.append(grid, row);
     show(view);
@@ -223,6 +228,7 @@ export function mountGame(cfg: GameConfig, root: HTMLElement): void {
     cleanup = cfg.startLevel(index, {
       stage,
       upgrades: ownedUpgrades(cfg.upgrades, progress, classroom),
+      levels: () => showSelect(),
       complete(starCount, insight) {
         if (classroom) {
           progress.best[lv.id] = Math.max(progress.best[lv.id] ?? 0, starCount);

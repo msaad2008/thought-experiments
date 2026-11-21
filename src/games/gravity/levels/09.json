@@ -1,7 +1,7 @@
 {
   "id": "09",
   "title": "Slow clock",
-  "hint": "Swing the ship round the black hole and watch its clock fall behind.",
+  "hint": "Place a body so the ship swings round the black hole, and watch its clock fall behind.",
   "insight": "Near a black hole time itself runs slower, so the closer the ship flew, the slower its clock ticked.",
   "ship": { "x": 880, "y": 130, "vx": 0, "vy": 106 },
   "goal": { "x": 709, "y": 110, "r": 40 },

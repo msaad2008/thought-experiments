@@ -79,3 +79,7 @@ test('buyUpgrade refuses when too expensive and leaves the store alone', () => {
   expect(buyUpgrade('gravity', 'aim', 4, localStorage)).toBeNull();
   expect(localStorage.getItem('te:gravity')).toBe(before);
 });
+test('loadProgress keeps only best values of 0 to 3 whole stars', () => {
+  localStorage.setItem('te:gravity', JSON.stringify({ best: { '01': -1, '02': 2.6, '03': 7, '04': 0, '05': null, '06': '2' }, spent: 0, upgrades: [] }));
+  expect(loadProgress('gravity', localStorage).best).toEqual({ '02': 2, '03': 3, '04': 0 });
+});

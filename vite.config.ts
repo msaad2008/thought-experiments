@@ -12,7 +12,7 @@ function partials(): Plugin {
       handler(html) {
         return html.replace(/<!--\s*@partial\s+([\w-]+)\s*-->/g, (_m, name: string) => {
           try {
-            return readFileSync(resolve(__dirname, 'src/partials', `${name}.html`), 'utf8').trimEnd();
+            return readFileSync(resolve(import.meta.dirname, 'src/partials', `${name}.html`), 'utf8').trimEnd();
           } catch {
             throw new Error(`Unknown HTML partial "${name}" (no src/partials/${name}.html)`);
           }

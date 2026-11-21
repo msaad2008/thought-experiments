@@ -17,6 +17,8 @@ export interface LevelContext {
   upgrades: ReadonlySet<string>;
   /** Shows the level end; mount records progress and tracks it. */
   complete(stars: number, insight: string): void;
+  /** Leaves the level for the level select. */
+  levels(): void;
 }
 export interface GameConfig {
   id: GameId;

@@ -2,7 +2,7 @@
 // The canvas transform maps world units to device pixels, so everything here is
 // drawn in world units; `u` (one CSS pixel in world units) sizes lines and text.
 import type { Level } from './levels';
-import { WORLD, accel, pulls, radius, type Body, type BodyType, type Point, type Ship } from './physics';
+import { WORLD, pulls, radius, type Body, type BodyType, type Point, type Ship } from './physics';
 
 const TAU = Math.PI * 2;
 const GOLD = '#ffd25e';
@@ -54,14 +54,36 @@ export function bodyColor(t: BodyType): string {
   return t === 'blackHole' ? ACCENT : LOOK[t].light;
 }
 
+/** Pull arrows: CSS px per unit of pull, as a fraction of the sky's side. */
+export const ARROW_GAIN = 0.04;
+/** The longest any pull arrow may be, as a fraction of the sky's side. */
+export const ARROW_CAP = 0.32;
+/** A nonzero pull never draws shorter than this (CSS px), so it stays visible. */
+const ARROW_MIN_PX = 6;
+
 /**
- * Length in CSS px of a pull arrow for acceleration `a`, on a sky `side` px wide:
- * grows with the log of the pull and is capped so a huge pull near a black hole
- * still fits. Zero (or a non-number) gives 0.
+ * The pull arrows as drawn, in CSS px, on a sky `side` px wide. Every arrow (one
+ * per pull and the total) shares one linear scale, so lengths are proportional
+ * to the pulls and the thin arrows add head to tail to the bold total. The scale
+ * is ARROW_GAIN·side px per unit of pull, lowered so the longest arrow is at most
+ * ARROW_CAP·side and no arrow runs past `room(dx, dy)` px in its direction.
  */
-export function arrowLength(a: number, side: number): number {
-  if (!(a > 0)) return 0;
-  return Math.min(0.32 * side, 0.05 * side * Math.log2(1 + a));
+export function arrowVectors(
+  parts: Point[],
+  side: number,
+  room: (dx: number, dy: number) => number = () => Infinity,
+): { parts: Point[]; total: Point } {
+  const clean = parts.map((p) => (Number.isFinite(p.x) && Number.isFinite(p.y) ? p : { x: 0, y: 0 }));
+  const sum = clean.reduce((a, p) => ({ x: a.x + p.x, y: a.y + p.y }), { x: 0, y: 0 });
+  const all = [...clean, sum];
+  let s = ARROW_GAIN * side;
+  for (const p of all) {
+    const m = Math.hypot(p.x, p.y);
+    if (!(m > 0) || !Number.isFinite(m)) continue;
+    s = Math.min(s, (ARROW_CAP * side) / m, Math.max(0, room(p.x / m, p.y / m)) / m);
+  }
+  const scale = (p: Point): Point => ({ x: p.x * s, y: p.y * s });
+  return { parts: clean.map(scale), total: scale(sum) };
 }
 
 function glow(g: CanvasRenderingContext2D, x: number, y: number, r0: number, r1: number, rgb: string, a: number): void {
@@ -191,20 +213,20 @@ function roomTo(v: View, p: Point, dx: number, dy: number, margin: number): numb
 
 function pullArrows(g: CanvasRenderingContext2D, v: View, start: Point, bodies: Body[], u: number): void {
   const side = Math.min(v.w, v.h);
+  // roomTo is in world units; arrowVectors works in CSS px.
+  const { parts, total } = arrowVectors(pulls(start, bodies), side, (dx, dy) => roomTo(v, start, dx, dy, 6 * u) / u);
   const draw = (a: Point, color: string, width: number) => {
     const m = Math.hypot(a.x, a.y);
     if (!(m > 0) || !Number.isFinite(m)) return;
-    const dx = a.x / m, dy = a.y / m;
-    const len = Math.min(arrowLength(m, side) * u, roomTo(v, start, dx, dy, 6 * u));
     g.strokeStyle = color;
     g.lineWidth = width * u;
-    arrow(g, start, dx, dy, len, (width + 6) * u);
+    arrow(g, start, a.x / m, a.y / m, Math.max(m, ARROW_MIN_PX) * u, (width + 6) * u);
   };
   g.save();
   g.lineCap = 'round';
   g.lineJoin = 'round';
-  pulls(start, bodies).forEach((a, i) => draw(a, bodyColor(bodies[i].type), 1.75));
-  if (bodies.length) draw(accel(start, bodies), GOLD, 4);
+  parts.forEach((a, i) => draw(a, bodyColor(bodies[i].type), 1.75));
+  if (bodies.length) draw(total, GOLD, 4);
   g.restore();
 }
 

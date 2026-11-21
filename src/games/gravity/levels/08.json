@@ -1,7 +1,7 @@
 {
   "id": "08",
   "title": "The edge",
-  "hint": "Keep the ship outside the dashed ring as it swings round the hole; a gentle pull from far away can be enough.",
+  "hint": "Keep the ship outside the outer dashed ring as it swings round the hole; a gentle pull from far away can be enough.",
   "insight": "Inside the dashed ring, three times the black hole's radius, no circular orbit is stable, so a ship that strays in there is easily lost to the hole.",
   "ship": { "x": 120, "y": 880, "vx": 147, "vy": -39 },
   "goal": { "x": 554, "y": 110, "r": 40 },

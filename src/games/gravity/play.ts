@@ -1,7 +1,7 @@
 // The Slingshot play view: placement editing, input, and the flight loop.
 import type { LevelContext } from '../../game-ui/types';
 import { LEVELS, toSimInput } from './levels';
-import { BODY_TYPES, DT, clockRate, createSim, radius, simulate, type Body, type BodyType, type Outcome, type Point, type Sim } from './physics';
+import { BODY_TYPES, DT, WORLD, clockRate, createSim, radius, simulate, type Body, type BodyType, type Outcome, type Point, type Sim } from './physics';
 import { canPlace, nearestFree, remaining } from './place';
 import { bodyColor, drawScene, fitView, type View } from './render';
 
@@ -106,12 +106,16 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
   const resetBtn = el('button', 'btn-ghost', 'Reset');
   resetBtn.type = 'button';
   resetBtn.addEventListener('click', () => {
+    if (drag || sim || finished) return;
     placed = [];
     selected = -1;
     changed();
     say('All bodies cleared.');
   });
-  actions.append(launchBtn, resetBtn);
+  const levelsBtn = el('button', 'btn-ghost', 'Levels');
+  levelsBtn.type = 'button';
+  levelsBtn.addEventListener('click', () => ctx.levels());
+  actions.append(launchBtn, resetBtn, levelsBtn);
   const status = el('p', 'sr-only');
   status.setAttribute('aria-live', 'polite');
   panel.append(hint, tray, actions, status);
@@ -152,6 +156,7 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
     launchBtn.className = sim ? 'btn-ghost' : 'cta';
     launchBtn.disabled = finished;
     resetBtn.disabled = !!sim || finished || placed.length === 0;
+    levelsBtn.disabled = finished; // the level end is on its way
   }
 
   /**
@@ -211,17 +216,23 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
     }
   }
 
+  /** World coordinates of a pointer, even off the canvas. */
   function toWorld(e: PointerEvent): Point | null {
     if (!view) return null;
     const r = canvas.getBoundingClientRect();
-    const x = e.clientX - r.left, y = e.clientY - r.top;
-    if (x < 0 || y < 0 || x > r.width || y > r.height) return null;
-    return { x: (x - view.ox) / view.k, y: (y - view.oy) / view.k };
+    return { x: (e.clientX - r.left - view.ox) / view.k, y: (e.clientY - r.top - view.oy) / view.k };
+  }
+
+  const inWorld = (p: Point) => p.x >= 0 && p.y >= 0 && p.x <= WORLD && p.y <= WORLD;
+
+  function overTray(e: PointerEvent): boolean {
+    const r = tray.getBoundingClientRect();
+    return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
   }
 
   // ----- flight -----
   function launch(): void {
-    if (sim || finished) return;
+    if (sim || finished || drag) return;
     hint.hidden = true;
     const input = toSimInput(level, placed);
     simBodies = input.bodies;
@@ -326,7 +337,7 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
       suppressClick = false;
       return;
     }
-    if (sim || finished || (remaining(level, placed)[t] ?? 0) === 0) return;
+    if (drag || sim || finished || (remaining(level, placed)[t] ?? 0) === 0) return;
     place(t);
     canvas.focus({ preventScroll: true });
   }
@@ -344,7 +355,7 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
     e.preventDefault(); // no text selection or focus change from the press itself
     canvas.focus({ preventScroll: true });
     const w = toWorld(e);
-    if (!w) return;
+    if (!w || !inWorld(w)) return;
     let hit = -1;
     let best = Infinity;
     placed.forEach((b, i) => {
@@ -359,12 +370,18 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
     }
   }
 
-  /** Follows the pointer once it has moved past the drag threshold. */
+  /**
+   * Follows the pointer once it has moved past the drag threshold. The body's
+   * centre (pointer plus offset, which lifts a finger-dragged body above the
+   * finger) counts while it is over the sky, even when the pointer is not.
+   * A placed body over the tray is on its way back there, so it leaves the sky.
+   */
   function track(d: Drag, e: PointerEvent): void {
     if (!d.moved && Math.hypot(e.clientX - d.sx, e.clientY - d.sy) < DRAG_START_PX) return;
     d.moved = true;
     const w = toWorld(e);
-    d.pos = w ? { x: w.x + d.off.x, y: w.y + d.off.y } : null;
+    const c = w && { x: w.x + d.off.x, y: w.y + d.off.y };
+    d.pos = c && inWorld(c) && !(d.from >= 0 && overTray(e)) ? c : null;
   }
 
   function pointerMove(e: PointerEvent): void {
@@ -376,8 +393,12 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
   function pointerUp(e: PointerEvent): void {
     if (!drag || e.pointerId !== drag.pointerId) return;
     const d = drag;
-    track(d, e); // the drop point is where the pointer is released
     drag = null;
+    if (sim || finished) {
+      changed(); // a flight or the level end overtook the drag: drop nothing
+      return;
+    }
+    track(d, e); // the drop point is where the pointer is released
     if (!d.moved) {
       changed();
       return; // a tap: a tray tap places via the click handler
@@ -386,8 +407,7 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
       suppressClick = true;
       setTimeout(() => (suppressClick = false), 0);
     }
-    const r = tray.getBoundingClientRect();
-    const onTray = e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+    const onTray = overTray(e);
     const b = d.pos ? { type: d.type, ...d.pos } : null;
     if (onTray && d.from >= 0) {
       placed.splice(d.from, 1);
