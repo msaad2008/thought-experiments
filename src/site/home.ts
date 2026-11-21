@@ -33,7 +33,6 @@ if (total && n > 0) {
 // motion (and without IntersectionObserver), so content is never hidden.
 const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 if (!reduce && 'IntersectionObserver' in window) {
-  document.documentElement.classList.add('fx');
   const io = new IntersectionObserver(
     (entries) => {
       for (const e of entries) {
