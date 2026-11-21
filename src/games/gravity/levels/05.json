@@ -1,0 +1,18 @@
+{
+  "id": "05",
+  "title": "Turnaround",
+  "hint": "Let the slow ship fall close past a heavy body and its gravity can swing it right round.",
+  "insight": "The slower the ship and the closer it passes, the more gravity turns it, here enough to send it back the way it came.",
+  "ship": { "x": 120, "y": 860, "vx": 56, "vy": 0 },
+  "goal": { "x": 110, "y": 464, "r": 40 },
+  "stars": [
+    { "x": 372, "y": 818 },
+    { "x": 520, "y": 671 },
+    { "x": 379, "y": 518 }
+  ],
+  "fixed": [],
+  "inventory": { "brownDwarf": 1, "whiteDwarf": 1 },
+  "solution": [
+    { "type": "whiteDwarf", "x": 470, "y": 670 }
+  ]
+}
