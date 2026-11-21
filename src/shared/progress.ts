@@ -18,6 +18,8 @@ export function withClassroom(href: string, search: string = location.search): s
   const hashAt = href.indexOf('#');
   const base = hashAt < 0 ? href : href.slice(0, hashAt);
   const hash = hashAt < 0 ? '' : href.slice(hashAt);
+  const queryAt = base.indexOf('?');
+  if (queryAt >= 0 && new URLSearchParams(base.slice(queryAt + 1)).has('classroom')) return href;
   return `${base}${base.includes('?') ? '&' : '?'}classroom${hash}`;
 }
 
@@ -49,9 +51,11 @@ export function loadProgress(game: GameId, store?: Storage | null): GameProgress
     const p = JSON.parse(raw) as Partial<GameProgress> | null;
     if (!p || typeof p !== 'object') return empty();
     return {
-      best: p.best && typeof p.best === 'object' && !Array.isArray(p.best) ? p.best : {},
-      spent: typeof p.spent === 'number' ? p.spent : 0,
-      upgrades: Array.isArray(p.upgrades) ? p.upgrades : [],
+      best: p.best && typeof p.best === 'object' && !Array.isArray(p.best)
+        ? Object.fromEntries(Object.entries(p.best).filter(([, v]) => Number.isFinite(v)))
+        : {},
+      spent: typeof p.spent === 'number' && Number.isFinite(p.spent) && p.spent >= 0 ? p.spent : 0,
+      upgrades: Array.isArray(p.upgrades) ? p.upgrades.filter((u): u is string => typeof u === 'string') : [],
       introSeen: p.introSeen === true,
     };
   } catch {
@@ -71,13 +75,28 @@ export function saveProgress(game: GameId, p: GameProgress, store?: Storage | nu
 
 export function recordLevel(game: GameId, levelId: string, stars: number, store?: Storage | null): GameProgress {
   const p = loadProgress(game, store);
-  p.best[levelId] = Math.max(p.best[levelId] ?? 0, stars);
+  if (!Number.isFinite(stars)) return p;
+  p.best[levelId] = Math.max(p.best[levelId] ?? 0, Math.max(0, Math.floor(stars)));
   saveProgress(game, p, store);
   return p;
 }
 
 export function starsEarned(p: GameProgress): number {
   return Object.values(p.best).reduce((a, b) => a + b, 0);
+}
+
+export function starsAvailable(p: GameProgress): number {
+  return Math.max(0, starsEarned(p) - p.spent);
+}
+
+/** Spend stars on an upgrade. Returns null if unaffordable or already owned. */
+export function buyUpgrade(game: GameId, id: string, cost: number, store?: Storage | null): GameProgress | null {
+  const p = loadProgress(game, store);
+  if (p.upgrades.includes(id) || !Number.isFinite(cost) || cost < 0 || cost > starsAvailable(p)) return null;
+  p.spent += cost;
+  p.upgrades.push(id);
+  saveProgress(game, p, store);
+  return p;
 }
 
 export function totalStars(store?: Storage | null): number {

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { test, expect, beforeEach, afterEach, vi } from 'vitest';
-import { loadProgress, recordLevel, totalStars, isClassroom, withClassroom, resetAll, GAME_IDS } from './progress';
+import { loadProgress, recordLevel, totalStars, isClassroom, withClassroom, resetAll, starsAvailable, buyUpgrade, GAME_IDS } from './progress';
 
 beforeEach(() => localStorage.clear());
 afterEach(() => { history.replaceState({}, '', '/'); vi.restoreAllMocks(); });
@@ -44,4 +44,38 @@ test('withClassroom leaves other hrefs alone', () => {
   expect(withClassroom('/gravity/', '')).toBe('/gravity/');
   expect(withClassroom('https://example.com/', '?classroom')).toBe('https://example.com/');
   expect(withClassroom('//x.com/a', '?classroom')).toBe('//x.com/a');
+});
+test('withClassroom is idempotent', () => {
+  expect(withClassroom('/gravity/?classroom', '?classroom')).toBe('/gravity/?classroom');
+  expect(withClassroom('/a/?x=1&classroom#h', '?classroom')).toBe('/a/?x=1&classroom#h');
+});
+test('recordLevel ignores NaN and floors fractions', () => {
+  recordLevel('gravity', '01', NaN, localStorage);
+  expect(loadProgress('gravity', localStorage).best).not.toHaveProperty('01');
+  recordLevel('gravity', '01', 2.7, localStorage);
+  expect(loadProgress('gravity', localStorage).best['01']).toBe(2);
+});
+test('loadProgress drops malformed entries', () => {
+  localStorage.setItem('te:gravity', JSON.stringify({ best: { '01': 'x', '02': 3 }, spent: -4, upgrades: ['aim', 7] }));
+  const p = loadProgress('gravity', localStorage);
+  expect(p.best).toEqual({ '02': 3 });
+  expect(p.spent).toBe(0);
+  expect(p.upgrades).toEqual(['aim']);
+});
+test('starsAvailable never goes negative', () => {
+  expect(starsAvailable({ best: { a: 3 }, spent: 5, upgrades: [], introSeen: false })).toBe(0);
+  expect(starsAvailable({ best: { a: 3 }, spent: 1, upgrades: [], introSeen: false })).toBe(2);
+});
+test('buyUpgrade spends stars once', () => {
+  recordLevel('gravity', '1', 3, localStorage);
+  const p = buyUpgrade('gravity', 'aim', 3, localStorage);
+  expect(p?.spent).toBe(3);
+  expect(p?.upgrades).toEqual(['aim']);
+  expect(buyUpgrade('gravity', 'aim', 3, localStorage)).toBeNull();
+});
+test('buyUpgrade refuses when too expensive and leaves the store alone', () => {
+  recordLevel('gravity', '1', 3, localStorage);
+  const before = localStorage.getItem('te:gravity');
+  expect(buyUpgrade('gravity', 'aim', 4, localStorage)).toBeNull();
+  expect(localStorage.getItem('te:gravity')).toBe(before);
 });
