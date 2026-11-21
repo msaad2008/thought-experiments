@@ -316,8 +316,172 @@ button.cta:disabled {
   width: 100%;
 }
 
-.placeholder {
+/* Slingshot play view: sky canvas, then hint, tray and buttons. */
+
+.view-host:has(.gv) {
+  padding-top: 12px;
+}
+
+.gv {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.gv-sky {
+  position: relative;
+  width: min(100%, max(280px, calc(100vh - 300px)));
+  width: min(100%, max(280px, calc(100dvh - 300px)));
+  aspect-ratio: 1;
+  margin-inline: auto;
+  border: 1px solid rgb(255 255 255 / 0.08);
+  border-radius: 16px;
+  background: radial-gradient(circle at 50% 40%, rgb(255 255 255 / 0.05), rgb(5 8 24 / 0.35));
+  overflow: hidden;
+}
+
+.gv-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  outline: none;
+}
+
+.gv-canvas:focus-visible {
+  box-shadow: inset 0 0 0 3px var(--gold);
+  border-radius: 16px;
+}
+
+.gv-clock {
+  position: absolute;
+  top: 10px;
+  left: 14px;
+  font-size: 17px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 6px rgb(0 0 0 / 0.6);
+  pointer-events: none;
+}
+
+.gv-toast {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: calc(100% - 24px);
+  padding: 10px 16px;
+  border-radius: 12px;
+  background: rgb(13 20 51 / 0.88);
+  font-size: 17px;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+}
+
+.gv-toast.on {
+  opacity: 1;
+}
+
+.gv-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.gv-hint {
+  margin: 0;
   color: var(--text-2);
+  line-height: 1.45;
+}
+
+.gv-tray {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.gv-item {
+  display: inline-flex;
+  align-items: center;
+  flex: 1 1 140px;
+  gap: 6px;
+  min-height: 48px;
+  padding: 0 12px 0 8px;
+  white-space: nowrap;
+  border: 1px solid rgb(255 255 255 / 0.14);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.06);
+  color: var(--text);
+  font: inherit;
+  cursor: grab;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.gv-item:not(:disabled):hover {
+  border-color: var(--accent);
+}
+
+.gv-item:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* The count sits inside a dot in the body's colour. */
+.gv-count {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  color: #1a1340;
+  font-size: 17px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.gv-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.gv-actions > button {
+  flex: 1 1 auto;
+  justify-content: center;
+}
+
+.gv-actions > .btn-ghost:disabled {
+  color: var(--text-2);
+  border-color: rgb(200 194 240 / 0.2);
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (min-width: 900px) {
+  .gv {
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 32px;
+  }
+  .gv-sky {
+    width: min(100% - 352px, max(360px, calc(100vh - 150px)));
+    width: min(100% - 352px, max(360px, calc(100dvh - 150px)));
+    margin: 0;
+  }
+  .gv-panel {
+    flex: none;
+    width: 320px;
+  }
 }
 
 .end {

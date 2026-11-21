@@ -103,7 +103,7 @@ export function createSim(input: SimInput, maxTime = MAX_TIME): Sim {
   return sim;
 }
 
-/** Runs a flight to its end. `path` holds the start point and then every 4th step. */
+/** Runs a flight to its end. `path` holds the start point, every 4th step, and the end point. */
 export function simulate(input: SimInput, maxTime = MAX_TIME): { outcome: Outcome; time: number; shipTime: number; collected: number[]; path: Point[] } {
   const sim = createSim(input, maxTime);
   const path: Point[] = [{ x: sim.ship.x, y: sim.ship.y }];
@@ -113,5 +113,6 @@ export function simulate(input: SimInput, maxTime = MAX_TIME): { outcome: Outcom
     outcome = sim.step();
     if (++n % 4 === 0) path.push({ x: sim.ship.x, y: sim.ship.y });
   }
+  if (n % 4 !== 0) path.push({ x: sim.ship.x, y: sim.ship.y });
   return { outcome, time: sim.time, shipTime: sim.shipTime, collected: [...sim.collected].sort((p, q) => p - q), path };
 }

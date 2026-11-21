@@ -6,6 +6,7 @@ import { mountGame } from '../../game-ui/mount';
 import { applyClassroomUi } from '../../site/classroom-ui';
 import { LEVELS } from './levels';
 import { INTRO, PHYSICS_HTML, UPGRADES } from './content';
+import { startLevel } from './play';
 
 mountGame(
   {
@@ -15,18 +16,7 @@ mountGame(
     intro: INTRO,
     physicsHtml: PHYSICS_HTML,
     upgrades: UPGRADES,
-    // Placeholder until Task 6 builds the real play stage.
-    startLevel(index, ctx) {
-      const lv = LEVELS[index];
-      ctx.stage.innerHTML = '';
-      const h = document.createElement('p');
-      h.className = 'placeholder';
-      h.textContent = `${lv.title}: ${lv.hint}`;
-      ctx.stage.appendChild(h);
-      return () => {
-        ctx.stage.innerHTML = '';
-      };
-    },
+    startLevel,
   },
   document.getElementById('game') as HTMLElement,
 );

@@ -154,3 +154,16 @@ test('clockRate: sqrt(0.75) at 4 r_s from a black hole, 1 without one', () => {
   expect(Math.abs(clockRate({ x: 500 + 4 * rs, y: 500 }, [{ type: 'moon', x: 0, y: 0 }, { type: 'blackHole', ...CENTER }]) - Math.sqrt(0.75))).toBeLessThan(1e-9);
   expect(clockRate({ x: 0, y: 0 }, [{ type: 'moon', ...CENTER }])).toBe(1);
 });
+
+test('simulate: the path always ends at the final ship position', () => {
+  const input: SimInput = { ship: { x: 100, y: 500, vx: 200, vy: 0 }, bodies: [], goal: { x: 800, y: 500, r: 30 }, stars: [] };
+  for (const maxTime of [5 * DT, 7 * DT, 8 * DT, 1.5]) {
+    const sim = createSim(input, maxTime);
+    while (!sim.step());
+    const res = simulate(input, maxTime);
+    expect(res.path[res.path.length - 1]).toEqual({ x: sim.ship.x, y: sim.ship.y });
+    // No duplicate end point when the flight ends on a sampled step.
+    const [a, b] = res.path.slice(-2);
+    expect(a).not.toEqual(b);
+  }
+});
