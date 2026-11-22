@@ -1,0 +1,18 @@
+{
+  "id": "07",
+  "title": "Twins",
+  "hint": "After the delivery the ship flies home. Who will have aged more: you, or your twin on Earth?",
+  "insight": "You and your twin started and ended in the same place, so your ages compare face to face. The traveller is younger.",
+  "star": "61 Cygni",
+  "distance": 11.4,
+  "gLimit": 1.5,
+  "ripen": 6,
+  "leverMax": 0.99,
+  "deadline": 15.0,
+  "marks": [
+    14.1,
+    13.4
+  ],
+  "messages": [],
+  "roundTrip": true
+}

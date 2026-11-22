@@ -1,0 +1,18 @@
+{
+  "id": "02",
+  "title": "Too fast",
+  "hint": "This culture needs 8 years of your time. Go too fast and it won't be ripe when you arrive.",
+  "insight": "The best speed makes the trip last, by your clock, exactly as long as the culture needs.",
+  "star": "Epsilon Eridani",
+  "distance": 10.47,
+  "gLimit": 1,
+  "ripen": 8,
+  "leverMax": 0.99,
+  "deadline": 15.6,
+  "marks": [
+    14.6,
+    13.7
+  ],
+  "messages": [],
+  "roundTrip": false
+}
