@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { LEVELS, massKg } from './levels';
-import { bestDx, dxToSlider, predictedCentre, velocitySpread } from './physics';
-import { GUN, arrowGeometry, drawScene, fitView, spreadGraphSvg, type Scene } from './render';
+import { bestDx, dxToSlider, predictedCentre, spread, velocitySpread } from './physics';
+import { GUN, arrowGeometry, drawScene, fitView, heading, spreadGraphSvg, type Scene } from './render';
 
 describe('uncertainty render', () => {
   it('fitView maps the level width onto the sky', () => {
@@ -45,26 +45,72 @@ describe('uncertainty render', () => {
     expect(cx / W).toBeCloseTo(dxToSlider(dx), 2);
   });
 
-  it('drawScene survives every phase and the slider ends', () => {
+  /** A fake 2D context: records every method called or property set (with its arguments), and any NaN passed to a path call. */
+  function fakeContext() {
     const bad: string[] = [];
-    const fn = (name: string) => (...a: number[]) => { if (a.some((n) => typeof n === 'number' && Number.isNaN(n))) bad.push(name); };
+    const calls: [string, unknown[]][] = [];
     const g = new Proxy({} as Record<string, unknown>, {
-      get: (o, k: string) => (k === 'arc' || k === 'moveTo' || k === 'lineTo' ? fn(k)
-        : k === 'createRadialGradient' || k === 'createLinearGradient' ? () => ({ addColorStop() {} })
-        : k in o ? o[k] : () => {}),
-      set: (o, k: string, v) => { o[k] = v; return true; },
+      get: (o, k: string) => (k in o ? o[k] : (...a: unknown[]) => {
+        calls.push([k, a]);
+        if ((k === 'arc' || k === 'moveTo' || k === 'lineTo') && a.some((n) => typeof n === 'number' && Number.isNaN(n))) bad.push(k);
+        return k === 'createRadialGradient' || k === 'createLinearGradient' ? { addColorStop() {} } : undefined;
+      }),
+      set: (o, k: string, v) => { o[k] = v; calls.push([k, [v]]); return true; },
     }) as unknown as CanvasRenderingContext2D;
-    const level = LEVELS[3];
-    const v = fitView(500, 400, 2, level.width);
-    for (const dx of [3, 150]) for (const reduced of [false, true]) for (const phase of ['set', 'aim', 'flight', 'result', 'over'] as const) {
-      const s: Scene = {
-        level, time: 0.4, reducedMotion: reduced, phase, reading: level.shots[1], dx, t: level.flightTime, progress: 0.5,
-        aim: { x: 300, y: 300 }, found: { x: 320, y: 310 }, hit: phase !== 'over' && dx === 3,
-        shotMarks: [{ at: { x: 100, y: 100 }, hit: true }, { at: { x: 200, y: 150 }, hit: false }],
-      };
-      expect(() => drawScene(g, v, s)).not.toThrow();
-      expect(() => drawScene(g, v, { ...s, hit: !s.hit, aim: null, found: null })).not.toThrow();
+    return { g, bad, calls };
+  }
+
+  it('drawScene survives every phase and the slider ends, with and without the arrow to impact', () => {
+    const { g, bad, calls } = fakeContext();
+    // LEVELS[5]: arrowToImpact false, so the dotted extension past the 1-second arrow is drawn too.
+    for (const level of [LEVELS[3], LEVELS[5]]) for (const dx of [3, 150]) for (const reduced of [false, true]) {
+      const v = fitView(500, 400, 2, level.width);
+      for (const phase of ['set', 'aim', 'flight', 'result', 'over'] as const) {
+        const s: Scene = {
+          level, time: 0.4, reducedMotion: reduced, phase, reading: level.shots[1], dx, t: level.flightTime, progress: 0.5,
+          aim: { x: 300, y: 300 }, found: { x: 320, y: 310 }, hit: phase !== 'over' && dx === 3,
+          shotMarks: [{ at: { x: 100, y: 100 }, hit: true }, { at: { x: 200, y: 150 }, hit: false }],
+        };
+        expect(() => drawScene(g, v, s)).not.toThrow();
+        expect(() => drawScene(g, v, { ...s, hit: !s.hit, aim: null, found: null })).not.toThrow();
+      }
     }
     expect(bad).toEqual([]);
+    // Only canvas calls that iOS 15 Safari (2021) has.
+    const used = new Set(calls.map(([k]) => k));
+    for (const k of ['roundRect', 'reset', 'letterSpacing', 'wordSpacing']) expect(used.has(k), k).toBe(false);
+  });
+
+  it('the ship points along its velocity', () => {
+    const level = LEVELS[3];
+    const v = fitView(400, 400, 1, level.width);
+    for (const reading of [{ x: 300, y: 200, vx: 20, vy: 0 }, { x: 300, y: 200, vx: -20, vy: 10 }, { x: 300, y: 200, vx: 0, vy: -15 }]) {
+      for (const phase of ['set', 'aim', 'flight', 'result'] as const) {
+        const { g, calls } = fakeContext();
+        drawScene(g, v, {
+          level, time: 0.4, reducedMotion: false, phase, reading, dx: 20, t: level.flightTime, progress: 0.5,
+          aim: { x: 300, y: 300 }, found: { x: 320, y: 310 }, hit: false, shotMarks: [],
+        });
+        const turns = calls.filter(([k]) => k === 'rotate').map(([, a]) => a[0] as number);
+        expect(turns, phase).toContainEqual(expect.closeTo(Math.atan2(reading.vy, reading.vx), 9));
+      }
+    }
+    expect(heading({ x: 0, y: 0, vx: 0, vy: 0 })).toBe(0);
+  });
+
+  it('the result shows the cloud at impact, also under reduced motion', () => {
+    const level = LEVELS[3], reading = level.shots[0], t = level.flightTime, dx = 20;
+    const v = fitView(400, 400, 1, level.width);
+    for (const reducedMotion of [false, true]) for (const hit of [false, true]) {
+      const { g, calls } = fakeContext();
+      drawScene(g, v, {
+        level, time: 0.2, reducedMotion, phase: 'result', reading, dx, t, progress: 1,
+        aim: { x: 300, y: 300 }, found: { x: 320, y: 310 }, hit, shotMarks: [],
+      });
+      const c = predictedCentre(reading, t), r = 2.5 * spread(dx, massKg(level), t);
+      const clouds = calls.filter(([k, a]) => k === 'createRadialGradient'
+        && Math.abs((a[0] as number) - c.x) < 1e-9 && Math.abs((a[1] as number) - c.y) < 1e-9 && Math.abs((a[5] as number) - r) < 1e-9);
+      expect(clouds, `reduced ${reducedMotion}, hit ${hit}`).toHaveLength(1);
+    }
   });
 });

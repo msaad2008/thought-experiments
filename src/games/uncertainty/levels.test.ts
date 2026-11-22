@@ -2,7 +2,7 @@
 // the best setting usually earns 3 stars, a real player's aim error still passes, and the wrong
 // setting fails where it should. Readings must be on screen and clear of the gun.
 import { describe, expect, it } from 'vitest';
-import { LEVELS, bestSetting, massKg, type Level } from './levels';
+import { LEVELS, bestSetting, massKg, startSetting, type Level } from './levels';
 import { AIM_ERROR, PRESETS, SHOTS, atLeast, hitChance, predictedCentre, spread } from './physics';
 
 const TABLE = [
@@ -75,6 +75,15 @@ describe('uncertainty levels', () => {
       for (const d of Object.values(PRESETS)) {
         expect(atLeast(odds(l, d), 5), l.id).toBeLessThanOrEqual(b - 0.3);
       }
+    }
+  });
+
+  it('the slider starts where it loses like a preset, so the dial must be turned', () => {
+    for (const l of LEVELS.slice(0, 3)) expect(startSetting(l), l.id).toBeNull(); // pick a mode
+    const [l4, ...rest] = LEVELS.slice(3);
+    expect(atLeast(odds(l4, startSetting(l4)!), 5), l4.id).toBeLessThanOrEqual(0.2);
+    for (const l of rest) {
+      expect(atLeast(odds(l, startSetting(l)!), 5), l.id).toBeLessThanOrEqual(atLeast(best(l), 5) - 0.3);
     }
   });
 

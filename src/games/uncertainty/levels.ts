@@ -40,3 +40,11 @@ export function bestSetting(l: Level, t: number = l.flightTime): number {
   if (!l.presetsOnly) return bestDx(m, t);
   return spread(PRESETS.position, m, t) <= spread(PRESETS.momentum, m, t) ? PRESETS.position : PRESETS.momentum;
 }
+
+/**
+ * Where the setting starts when there is no kept setup: no mode on levels 1–3 (the player picks one),
+ * Position mode's Δx on the slider levels. A slider start inside the dip would win the level untouched.
+ */
+export function startSetting(l: Level): number | null {
+  return l.presetsOnly ? null : PRESETS.position;
+}

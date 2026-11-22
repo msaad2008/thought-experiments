@@ -9,7 +9,10 @@ import { fitSky } from '../../game-ui/fit';
 import { drawScene, type Scene } from './render';
 import { startLevel } from './play';
 import { LEVELS, massKg } from './levels';
-import { bestDx, dxToSlider, predictedCentre, sliderToDx, spread, type Point } from './physics';
+import { PRESETS, bestDx, dxToSlider, predictedCentre, sliderToDx, spread, type Point } from './physics';
+
+/** The slider's value at a normal start on levels 4–8: Position mode's Δx, never the answer. */
+const START = String(Math.round(dxToSlider(PRESETS.position) * 1000));
 
 /** The canvas is mocked as a 400 px square at the page's top-left, so 1 m = 400 / width px. */
 const SIDE = 400;
@@ -106,8 +109,8 @@ function aimAt(s: S, p: Point): void {
   ptr(s.canvas, 'pointerup', p.x * k, p.y * k);
 }
 
-const key = (s: S, k: string, shiftKey = false) =>
-  s.canvas.dispatchEvent(new KeyboardEvent('keydown', { key: k, shiftKey, bubbles: true, cancelable: true }));
+const key = (s: S, k: string, shiftKey = false, repeat = false) =>
+  s.canvas.dispatchEvent(new KeyboardEvent('keydown', { key: k, shiftKey, repeat, bubbles: true, cancelable: true }));
 
 /** Steps frames until the shell lands; returns how many it took. */
 function fly(s: S, ms = 1000 / 60): number {
@@ -159,8 +162,8 @@ test('levels 1–3 offer only the two modes; level 4 brings the slider', () => {
     const s = setup(i);
     expect(s.radios).toEqual([]);
     expect(s.slider).not.toBeNull();
-    expect([s.slider!.min, s.slider!.max, s.slider!.value]).toEqual(['0', '1000', '500']);
-    expect(s.slider!.getAttribute('aria-valuetext')).toBe(`Δx ${Math.round(sliderToDx(0.5))} m`);
+    expect([s.slider!.min, s.slider!.max, s.slider!.value]).toEqual(['0', '1000', START]);
+    expect(s.slider!.getAttribute('aria-valuetext')).toBe('Δx 10 m'); // Position mode's Δx: the dial must be turned
     const row = s.slider!.parentElement!.textContent!;
     expect(row.indexOf('Position')).toBeLessThan(row.indexOf('Momentum'));
     fresh();
@@ -402,14 +405,14 @@ test('Retry with this setup keeps the setting', () => {
   fresh();
 
   s = setup(3);
-  expect(s.slider!.value).toBe('500'); // a normal start
+  expect(s.slider!.value).toBe(START); // a normal start
   fresh();
   s = setup(3, { keepSetup: true });
   expect(s.slider!.value).toBe('200');
   expect(s.slider!.getAttribute('aria-valuetext')).toBe(`Δx ${Math.round(sliderToDx(0.2))} m`);
   fresh();
   s = setup(4, { keepSetup: true }); // never won: the normal start
-  expect(s.slider!.value).toBe('500');
+  expect(s.slider!.value).toBe(START);
 });
 
 test('keyboard: arrows aim from the cloud centre, Enter fires', () => {
@@ -440,11 +443,21 @@ test('keyboard: arrows aim from the cloud centre, Enter fires', () => {
   expect(s.primary.disabled).toBe(true);
 });
 
-test('the readout shows the blur at impact only with the Spread graph', () => {
-  let s = setup(3);
+test('the readout shows the ship, the setting, and the blur at impact only with the Spread graph', () => {
+  let s = setup(0);
+  expect(s.readout.textContent).toBe('Ship 5,000 t · Pick a mode · shell flight 1.0 s');
+  s.radios[1].click();
+  expect(s.readout.textContent).toBe('Ship 5,000 t · Δx = 50 m · Δv = 2.0 m/s · shell flight 1.0 s');
+  fresh();
+
+  s = setup(1);
+  expect(s.readout.textContent).toBe('Ship 270 t · Pick a mode · shell flight 3.0 s');
+  fresh();
+
+  s = setup(3);
   const m = massKg(s.level);
-  const dx = sliderToDx(0.5);
-  expect(s.readout.textContent).toBe(`Δx = ${Math.round(dx)} m · Δv = 11.8 m/s · shell flight 2.0 s`);
+  const dx = PRESETS.position;
+  expect(s.readout.textContent).toBe('Ship 2,000 t · Δx = 10 m · Δv = 25.0 m/s · shell flight 2.0 s');
   expect(s.stage.querySelector('.uc-graph')).toBeNull();
   s.primary.click();
   aimAt(s, s.centre(0));
@@ -455,7 +468,7 @@ test('the readout shows the blur at impact only with the Spread graph', () => {
 
   s = setup(3, { upgrades: ['graph'] });
   expect(s.readout.textContent).toBe(
-    `Δx = ${Math.round(dx)} m · Δv = 11.8 m/s · shell flight 2.0 s · blur at impact ≈ ${Math.round(spread(dx, m, 2))} m`,
+    `Ship 2,000 t · Δx = 10 m · Δv = 25.0 m/s · shell flight 2.0 s · blur at impact ≈ ${Math.round(spread(dx, m, 2))} m`,
   );
   expect(s.stage.querySelector('.uc-graph svg')).not.toBeNull();
   s.slider!.value = '0';
@@ -541,4 +554,67 @@ test('the sky is re-fitted when the panel changes height, but never while aiming
   expect(fits()).toBe(n); // not while aiming or in flight
   fly(s);
   expect(fits()).toBe(n + 1); // the result shows: the sky grows back
+});
+
+test('keyboard: Enter moves on from a result and tries again after a failed level; a held Enter does nothing', () => {
+  const s = setup(0, { rng: () => 0 });
+  s.radios[0].click();
+  key(s, 'Enter', false, true); // auto-repeat: ignored
+  expect(s.primary.textContent).toBe('Measure');
+  key(s, 'Enter'); // Measure
+  key(s, 'ArrowRight'); // a reticle at the cloud
+  key(s, 'Enter', false, true); // a held Enter can't Measure and then Fire
+  expect(s.primary.textContent).toBe('Fire');
+  expect(s.status()).not.toBe('Fired.');
+  for (let i = 0; i < 5; i++) {
+    if (i > 0) key(s, 'Enter'); // Measure
+    aimAt(s, away(s, s.centre(i))); // every shot 100 m off: the level fails
+    key(s, 'Enter'); // Fire
+    fly(s);
+    if (i < 4) {
+      expect(s.primary.textContent).toBe('Next shot');
+      key(s, 'Enter'); // Next shot, without waiting
+      expect(s.primary.textContent).toBe('Measure');
+      expect(look().reading).toEqual(LEVELS[0].shots[i + 1]);
+    }
+  }
+  expect(s.primary.textContent).toBe('Try again');
+  key(s, 'Enter', false, true);
+  expect(s.primary.textContent).toBe('Try again');
+  key(s, 'Enter');
+  expect(s.primary.textContent).toBe('Measure');
+  expect(s.dots()).toEqual(Array(5).fill('uc-dot'));
+});
+
+test('the result toast does not outlive its shot', () => {
+  const s = setup(0, { rng: () => 0 });
+  s.radios[0].click();
+  playShot(s, s.centre(0));
+  expect(s.toast.classList.contains('on')).toBe(true);
+  vi.advanceTimersByTime(1400); // the next shot comes by itself
+  expect(s.primary.textContent).toBe('Measure');
+  expect(s.toast.classList.contains('on')).toBe(false);
+  playShot(s, s.centre(1));
+  s.primary.click(); // Next shot, by hand
+  expect(s.toast.classList.contains('on')).toBe(false);
+});
+
+test('a miss just outside R never reads as R', () => {
+  const s = setup(0, { rng: () => 0 }); // R = 30 m; every sample lands on the centre
+  s.radios[0].click();
+  const c = s.centre(0);
+  playShot(s, { x: c.x + 30.3, y: c.y });
+  expect(s.status()).toBe('Missed by 31 m.');
+});
+
+test('taps map with the live canvas size, even before the ResizeObserver catches up', () => {
+  const s = setup(0);
+  s.radios[0].click();
+  s.primary.click();
+  // The sky was re-fitted: the canvas is now 800 × 400 CSS px, so the square is 400 px, 200 px in from the left.
+  vi.mocked(HTMLCanvasElement.prototype.getBoundingClientRect).mockReturnValue(new DOMRect(0, 0, 800, 400));
+  const k = 400 / s.level.width;
+  ptr(s.canvas, 'pointerdown', 200 + 100 * k, 50 * k);
+  ptr(s.canvas, 'pointerup', 200 + 100 * k, 50 * k);
+  expect(look().aim).toEqual({ x: expect.closeTo(100, 6), y: expect.closeTo(50, 6) });
 });

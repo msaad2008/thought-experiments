@@ -74,11 +74,19 @@ function line(g: CanvasRenderingContext2D, a: Point, b: Point): void {
   g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.stroke();
 }
 
-/** A cartoon space warship, nose to the right, `s` metres long. Static (no pulsing). */
-function ship(g: CanvasRenderingContext2D, p: Point, s: number, alpha: number, u: number, dashed = false, engine = true): void {
+/** Which way a reading's ship points: along its velocity (nose right when it is not moving). */
+export const heading = (r: Reading): number => fin(Math.atan2(r.vy, r.vx));
+
+/**
+ * A cartoon space warship, `s` metres long, nose along `angle` (radians, canvas y down). Static (no pulsing).
+ * Drawn with paths, rects and arcs only (no roundRect: iOS 15 Safari lacks it).
+ */
+function ship(g: CanvasRenderingContext2D, p: Point, angle: number, s: number, alpha: number, u: number, dashed = false, engine = true): void {
   g.save();
   g.globalAlpha = alpha;
   g.translate(p.x, p.y);
+  g.rotate(angle);
+  if (Math.cos(angle) < 0) g.scale(1, -1); // flying left: keep the dark underside below
   const poly = (pts: number[][]) => {
     g.beginPath();
     pts.forEach(([x, y], i) => (i ? g.lineTo(x * s, y * s) : g.moveTo(x * s, y * s)));
@@ -99,7 +107,7 @@ function ship(g: CanvasRenderingContext2D, p: Point, s: number, alpha: number, u
     poly([[-0.1, -0.1], [-0.4, -0.3], [-0.46, -0.3], [-0.36, -0.1]]);
     g.fill();
     g.fillStyle = '#ff7a3d'; // engine nozzles
-    for (const y of [-0.08, 0.02]) { g.beginPath(); g.roundRect(-s * 0.52, y * s, s * 0.08, s * 0.06, s * 0.015); g.fill(); }
+    for (const y of [-0.08, 0.02]) g.fillRect(-s * 0.52, y * s, s * 0.08, s * 0.06);
     g.fillStyle = '#6c5bb5'; poly(hull); g.fill();
     g.fillStyle = '#4a3b8c'; poly([[0.5, 0], [0.12, 0.13], [-0.36, 0.12], [-0.46, 0.06], [-0.46, 0.0], [0.3, 0]]); g.fill();
     g.fillStyle = '#d9ccff'; // cockpit
@@ -188,17 +196,18 @@ export function drawScene(g: CanvasRenderingContext2D, v: View, s: Scene): void 
   }
 
   const shipW = Math.max(s.level.hitRadius * 1.8, 26 * u);
+  const head = heading(rd);
   const aimPt = s.aim ? { x: fin(s.aim.x), y: fin(s.aim.y) } : null;
   // radial gradient reaching zero alpha at 2.5σ, never smaller than ~6 CSS px
   const cloud = (c: Point, sigma: number) => glow(g, c, Math.max(2.5 * fin(sigma, 1), 6 * u), '155,123,255', 0.6);
   gunArt(g, gun, s.phase === 'set' || s.phase === 'over' ? null : aimPt, u);
 
   if (s.phase === 'set') {
-    ship(g, rd, shipW, 0.7, u, true);
+    ship(g, rd, head, shipW, 0.7, u, true);
   } else if (s.phase === 'aim') {
     const a = arrowGeometry(s.level, rd, s.dx, s.t);
     cloud(rd, s.dx);
-    ship(g, rd, shipW, 0.4, u);
+    ship(g, rd, head, shipW, 0.4, u);
     // the fan: a translucent wedge at the arrow tip, half-width `fan`
     const ang = Math.atan2(a.to.y - a.from.y, a.to.x - a.from.x);
     const nx = -Math.sin(ang) * a.fan, ny = Math.cos(ang) * a.fan;
@@ -214,7 +223,7 @@ export function drawScene(g: CanvasRenderingContext2D, v: View, s: Scene): void 
     const p = clamp01(s.progress), tt = p * s.t;
     const c = { x: rd.x + rd.vx * tt, y: rd.y + rd.vy * tt };
     cloud(c, spread(s.dx, m, tt));
-    ship(g, c, shipW, 0.35, u);
+    ship(g, c, head, shipW, 0.35, u);
     if (aimPt) {
       reticle(g, aimPt, u);
       g.strokeStyle = 'rgba(217,204,255,0.4)'; g.lineWidth = 1.5 * u; g.setLineDash([3 * u, 4 * u]);
@@ -228,10 +237,15 @@ export function drawScene(g: CanvasRenderingContext2D, v: View, s: Scene): void 
   } else if (s.phase === 'result') {
     const f = s.found ? { x: fin(s.found.x), y: fin(s.found.y) } : null;
     const T = s.reducedMotion ? 99 : Math.max(0, fin(s.time));
+    // The cloud at impact, faint: where the ship could have been found. It is the flight's last frame,
+    // and the only one reduced-motion players see.
+    g.globalAlpha = 0.45;
+    cloud(predictedCentre(rd, s.t), spread(s.dx, m, s.t));
+    g.globalAlpha = 1;
     if (f) {
       g.strokeStyle = 'rgba(255,210,94,0.35)'; g.lineWidth = 1.5 * u; g.setLineDash([4 * u, 4 * u]);
       g.beginPath(); g.arc(f.x, f.y, s.level.hitRadius, 0, TAU); g.stroke(); g.setLineDash([]);
-      ship(g, f, shipW, s.hit ? 1 - 0.85 * clamp01(T / 1.2) : 1, u, false, !s.reducedMotion);
+      ship(g, f, head, shipW, s.hit ? 1 - 0.85 * clamp01(T / 1.2) : 1, u, false, !s.reducedMotion);
       if (s.hit) {
         if (!s.reducedMotion && T < 0.35) glow(g, f, s.level.hitRadius * (0.6 + 3 * T), '255,240,200', 0.9 * (1 - T / 0.35));
         const grow = clamp01(T / 1.0), sc = 0.4 + grow * 0.6;

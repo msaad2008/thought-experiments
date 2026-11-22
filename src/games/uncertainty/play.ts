@@ -2,7 +2,7 @@
 // The shell's landing is decided the moment Fire is pressed; the flight only shows it.
 import { fitSky } from '../../game-ui/fit';
 import type { LevelContext } from '../../game-ui/types';
-import { LEVELS, bestSetting, massKg } from './levels';
+import { LEVELS, bestSetting, massKg, startSetting } from './levels';
 import {
   PASS_HITS, PRESETS, SHOTS, dxToSlider, flightTime, predictedCentre, sampleFound, sliderToDx, spread, velocitySpread,
   type Point,
@@ -41,7 +41,7 @@ export function startLevel(index: number, ctx: LevelContext, rng: () => number =
   const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 
   /** The setting: null on levels 1–3 until a mode is picked. */
-  let dx: number | null = (ctx.keepSetup ? lastDx.get(level.id) : undefined) ?? (level.presetsOnly ? null : sliderToDx(0.5));
+  let dx: number | null = (ctx.keepSetup ? lastDx.get(level.id) : undefined) ?? startSetting(level);
   let phase: Phase = 'set';
   let shot = 0;
   let aim: Point | null = null;
@@ -93,7 +93,7 @@ export function startLevel(index: number, ctx: LevelContext, rng: () => number =
       r.name = name;
       r.value = key;
       r.addEventListener('change', () => r.checked && choose(PRESETS[key]));
-      label.append(r, text);
+      label.append(r, el('span', '', text)); // the span draws the segment: input:checked + span needs no :has()
       radios.push(r);
       setting.append(label);
     }
@@ -154,9 +154,10 @@ export function startLevel(index: number, ctx: LevelContext, rng: () => number =
   }
 
   function readoutText(): string {
+    const ship = `Ship ${level.massTonnes.toLocaleString('en-US')} t`;
     const flight = `shell flight ${t.toFixed(1)} s`;
-    if (dx === null) return `Pick a mode · ${flight}`;
-    const text = `Δx = ${Math.round(dx)} m · Δv = ${velocitySpread(dx, m).toFixed(1)} m/s · ${flight}`;
+    if (dx === null) return `${ship} · Pick a mode · ${flight}`;
+    const text = `${ship} · Δx = ${Math.round(dx)} m · Δv = ${velocitySpread(dx, m).toFixed(1)} m/s · ${flight}`;
     // Only the Spread graph tells the blur at impact; otherwise the puzzle is "make the number smallest".
     return graph ? `${text} · blur at impact ≈ ${Math.round(spread(dx, m, t))} m` : text;
   }
@@ -218,7 +219,7 @@ export function startLevel(index: number, ctx: LevelContext, rng: () => number =
   function draw(): void {
     const g = view && canvas.getContext('2d');
     if (!view || !g) return;
-    const showing = phase === 'result' ? shots.at(-1) : undefined;
+    const showing = phase === 'result' ? shots[shots.length - 1] : undefined;
     drawScene(g, view, {
       level,
       time: phase === 'result' ? now - resultAt : now,
@@ -290,7 +291,9 @@ export function startLevel(index: number, ctx: LevelContext, rng: () => number =
     progress = 1;
     phase = 'result';
     resultAt = now;
-    const text = mark.hit ? 'Hit!' : `Missed by ${Math.round(Math.hypot(mark.at.x - aim.x, mark.at.y - aim.y))} m.`;
+    // Rounded up, and always past R: a miss never reads as "Missed by 30 m" when R is 30 m.
+    const off = Math.max(Math.ceil(Math.hypot(mark.at.x - aim.x, mark.at.y - aim.y) - 1e-9), Math.floor(level.hitRadius) + 1);
+    const text = mark.hit ? 'Hit!' : `Missed by ${off} m.`;
     const hits = shots.filter((s) => s.hit).length;
     if (shots.length < SHOTS) {
       changed();
@@ -321,6 +324,7 @@ export function startLevel(index: number, ctx: LevelContext, rng: () => number =
     shot++;
     phase = 'set';
     aim = null;
+    toast.classList.remove('on'); // the result toast belongs to the shot that landed
     changed();
   }
 
@@ -362,9 +366,11 @@ export function startLevel(index: number, ctx: LevelContext, rng: () => number =
 
   // ----- aiming input -----
   function toWorld(e: PointerEvent): Point | null {
-    if (!view) return null;
+    // The live size, not the cached view: the ResizeObserver may not have run since the last re-fit.
     const r = canvas.getBoundingClientRect();
-    return clampPt({ x: (e.clientX - r.left - view.ox) / view.k, y: (e.clientY - r.top - view.oy) / view.k });
+    if (r.width === 0 || r.height === 0) return null;
+    const v = fitView(r.width, r.height, 1, W);
+    return clampPt({ x: (e.clientX - r.left - v.ox) / v.k, y: (e.clientY - r.top - v.oy) / v.k });
   }
 
   function pointerDown(e: PointerEvent): void {
@@ -394,8 +400,11 @@ export function startLevel(index: number, ctx: LevelContext, rng: () => number =
 
   function keyDown(e: KeyboardEvent): void {
     if (e.key === 'Enter') {
+      if (e.repeat) return e.preventDefault(); // a held Enter must not Measure and then Fire
       if (phase === 'set') measure();
       else if (phase === 'aim') fire();
+      else if (phase === 'result') nextShot();
+      else if (phase === 'over') tryAgain();
       else return;
       e.preventDefault();
       return;

@@ -555,11 +555,7 @@ button.cta:disabled {
 .uc-mode {
   position: relative;
   display: flex;
-  align-items: center;
-  justify-content: center;
   min-height: 44px;
-  padding: 0 10px;
-  border-radius: 999px;
   font-weight: 600;
   text-align: center;
   cursor: pointer;
@@ -573,18 +569,31 @@ button.cta:disabled {
   cursor: inherit;
 }
 
-.uc-mode:has(input:checked) {
+/* The span is the visible segment; sibling selectors, so it works where :has() does not. */
+.uc-mode span {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10px;
+  border-radius: 999px;
+}
+
+.uc-mode input:checked + span {
   background: var(--accent);
   color: #140f38;
 }
 
-.uc-mode:has(input:focus-visible) {
+.uc-mode input:focus-visible + span {
   outline: 3px solid var(--gold);
   outline-offset: 2px;
 }
 
-.uc-mode:has(input:disabled) {
+.uc-mode input:disabled + span {
   opacity: 0.7;
+}
+
+.uc-mode input:disabled {
   cursor: not-allowed;
 }
 
