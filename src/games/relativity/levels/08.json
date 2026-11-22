@@ -1,0 +1,18 @@
+{
+  "id": "08",
+  "title": "Far star",
+  "hint": "Vega is 25 light-years away. Only a speed close to light gets you there in time.",
+  "insight": "Near light speed, a trip that takes half a century on Earth can take far less of your life.",
+  "star": "Vega",
+  "distance": 25.0,
+  "gLimit": 1,
+  "ripen": 8,
+  "leverMax": 0.999,
+  "deadline": 28.7,
+  "marks": [
+    27.9,
+    27.3
+  ],
+  "messages": [],
+  "roundTrip": true
+}

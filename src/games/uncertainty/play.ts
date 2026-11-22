@@ -1,6 +1,7 @@
 // The Uncertain Fire play view. One shot = set → aim → flight → result; five shots a level.
 // The shell's landing is decided the moment Fire is pressed; the flight only shows it.
 import { fitSky } from '../../game-ui/fit';
+import { afterUnpaused, capturePointer } from '../../game-ui/play-helpers';
 import type { LevelContext } from '../../game-ui/types';
 import { LEVELS, bestSetting, massKg, startSetting } from './levels';
 import {
@@ -60,7 +61,7 @@ export function startLevel(index: number, ctx: LevelContext, rng: () => number =
   let now = 0;
   let resultAt = 0;
   let toastTimer = 0;
-  let resultTimer = 0;
+  let cancelWait = () => {};
   let shownGraphDx: number | null = null;
   /** The panel height the sky was last fitted to. */
   let fittedPanelH = -1;
@@ -76,7 +77,7 @@ export function startLevel(index: number, ctx: LevelContext, rng: () => number =
   toast.setAttribute('aria-hidden', 'true'); // screen readers hear it once, through the status line
   sky.append(canvas, toast);
 
-  const panel = el('div', 'gv-panel');
+  const panel = el('div', 'gv-panel uc-panel');
   const hint = el('p', 'gv-hint', level.hint);
   const radios: HTMLInputElement[] = [];
   let slider: HTMLInputElement | null = null;
@@ -219,10 +220,11 @@ export function startLevel(index: number, ctx: LevelContext, rng: () => number =
   function draw(): void {
     const g = view && canvas.getContext('2d');
     if (!view || !g) return;
-    const showing = phase === 'result' ? shots[shots.length - 1] : undefined;
+    const landed = phase === 'result' || phase === 'over'; // 'over': the failing last shot stays on show
+    const showing = landed ? shots[shots.length - 1] : undefined;
     drawScene(g, view, {
       level,
-      time: phase === 'result' ? now - resultAt : now,
+      time: landed ? now - resultAt : now,
       reducedMotion: reduced,
       phase,
       reading: reading(),
@@ -298,15 +300,15 @@ export function startLevel(index: number, ctx: LevelContext, rng: () => number =
     if (shots.length < SHOTS) {
       changed();
       showToast(text);
-      resultTimer = window.setTimeout(nextShot, RESULT_MS);
+      cancelWait = afterUnpaused(RESULT_MS, ctx.paused, nextShot);
     } else if (hits >= PASS_HITS) {
       finished = true;
       lastDx.set(level.id, dx!);
       changed();
       showToast(text);
-      resultTimer = window.setTimeout(() => {
+      cancelWait = afterUnpaused(RESULT_MS, ctx.paused, () => {
         if (!disposed) ctx.complete(hits - (PASS_HITS - 1), level.insight);
-      }, RESULT_MS);
+      });
     } else {
       phase = 'over';
       const over = `${hits} of ${SHOTS} hits. You need ${PASS_HITS}.`;
@@ -320,7 +322,7 @@ export function startLevel(index: number, ctx: LevelContext, rng: () => number =
 
   function nextShot(): void {
     if (phase !== 'result' || finished || disposed) return;
-    clearTimeout(resultTimer);
+    cancelWait();
     shot++;
     phase = 'set';
     aim = null;
@@ -380,7 +382,7 @@ export function startLevel(index: number, ctx: LevelContext, rng: () => number =
     e.preventDefault(); // no text selection or focus change from the press itself
     canvas.focus({ preventScroll: true });
     pointer = e.pointerId;
-    canvas.setPointerCapture(e.pointerId);
+    capturePointer(canvas, e.pointerId);
     aim = p;
     changed();
   }
@@ -438,13 +440,17 @@ export function startLevel(index: number, ctx: LevelContext, rng: () => number =
   changed();
   fit();
   resize();
+  // Web fonts can land after the first fit and make the panel taller: fit again (never under the reticle).
+  document.fonts?.ready.then(() => {
+    if (!disposed && phase !== 'aim' && phase !== 'flight') onWindowResize();
+  });
   if (!document.hidden) raf = requestAnimationFrame(frame);
 
   return () => {
     disposed = true;
     cancelAnimationFrame(raf);
     clearTimeout(toastTimer);
-    clearTimeout(resultTimer);
+    cancelWait();
     ro?.disconnect();
     document.removeEventListener('visibilitychange', onVisibility);
     window.removeEventListener('resize', onWindowResize);

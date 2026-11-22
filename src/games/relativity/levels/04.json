@@ -1,0 +1,18 @@
+{
+  "id": "04",
+  "title": "Out of reach",
+  "hint": "The lever goes higher than the ship can reach: it must start braking before it gets there.",
+  "insight": "Stopping from near light speed takes a long way, so the top of the lever was never reachable.",
+  "star": "Tau Ceti",
+  "distance": 11.91,
+  "gLimit": 1,
+  "ripen": 6.5,
+  "leverMax": 0.999,
+  "deadline": 15.3,
+  "marks": [
+    14.7,
+    14.3
+  ],
+  "messages": [],
+  "roundTrip": false
+}

@@ -234,7 +234,7 @@ export function drawScene(g: CanvasRenderingContext2D, v: View, s: Scene): void 
       glow(g, sh, 12 * u, '255,210,94', 0.5);
       disc(g, sh, 4 * u, '#fff3c4');
     }
-  } else if (s.phase === 'result') {
+  } else if (s.phase === 'result' || s.phase === 'over') {
     const f = s.found ? { x: fin(s.found.x), y: fin(s.found.y) } : null;
     const T = s.reducedMotion ? 99 : Math.max(0, fin(s.time));
     // The cloud at impact, faint: where the ship could have been found. It is the flight's last frame,

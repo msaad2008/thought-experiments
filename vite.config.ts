@@ -31,6 +31,7 @@ export default defineConfig({
         about: 'about/index.html',
         gravity: 'gravity/index.html',
         uncertainty: 'uncertainty/index.html',
+        relativity: 'relativity/index.html',
         notFound: '404.html',
       },
     },

@@ -12,7 +12,7 @@ export interface GameInfo {
 }
 
 export const GAMES: GameInfo[] = [
-  { id: 'relativity', title: 'Antidote Run', subtitle: 'Relativity', from: '#1c2e6e', to: '#0d1433', accent: '#5fd0ff', status: 'soon', maxStars: 0 },
+  { id: 'relativity', title: 'Antidote Run', subtitle: 'Relativity', from: '#1c2e6e', to: '#0d1433', accent: '#5fd0ff', status: 'live', maxStars: 24 },
   { id: 'gravity', title: 'Slingshot', subtitle: 'Gravity', from: '#6a2a1c', to: '#2a1236', accent: '#ff7a3d', status: 'live', maxStars: 30 },
   { id: 'entanglement', title: 'Entangled Maze', subtitle: 'Entanglement', from: '#5a1a4a', to: '#1a1440', accent: '#ff5c8a', status: 'soon', maxStars: 0 },
   { id: 'uncertainty', title: 'Uncertain Fire', subtitle: 'Uncertainty', from: '#3a2a7a', to: '#140f38', accent: '#9b7bff', status: 'live', maxStars: 24 },

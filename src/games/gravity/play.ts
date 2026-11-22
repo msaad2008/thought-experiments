@@ -1,5 +1,6 @@
 // The Slingshot play view: placement editing, input, and the flight loop.
 import { fitSky } from '../../game-ui/fit';
+import { afterUnpaused, capturePointer } from '../../game-ui/play-helpers';
 import type { LevelContext } from '../../game-ui/types';
 import { LEVELS, toSimInput } from './levels';
 import { BODY_TYPES, DT, WORLD, clockRate, createSim, radius, simulate, type Body, type BodyType, type Outcome, type Point, type Sim } from './physics';
@@ -73,7 +74,7 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
   let lastT: number | null = null;
   let now = 0;
   let toastTimer = 0;
-  let winTimer = 0;
+  let cancelWin = () => {};
 
   // ----- DOM -----
   const root = el('div', 'gv');
@@ -309,9 +310,9 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
       let insight = level.insight;
       if (level.id === '09') insight += ` Your clock fell ${(s.time - s.shipTime).toFixed(1)} s behind a far-away clock.`;
       showToast('Beacon reached!');
-      winTimer = window.setTimeout(() => {
+      cancelWin = afterUnpaused(WIN_DELAY_MS, ctx.paused, () => {
         if (!disposed) ctx.complete(stars, insight);
-      }, WIN_DELAY_MS);
+      });
       return;
     }
     let text: string;
@@ -385,7 +386,7 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
     if ((remaining(level, placed)[t] ?? 0) === 0) return;
     const lift = e.pointerType === 'touch' && view ? TOUCH_LIFT_PX / view.k : 0;
     drag = { type: t, from: -1, pointerId: e.pointerId, sx: e.clientX, sy: e.clientY, moved: false, off: { x: 0, y: -lift }, pos: null };
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    capturePointer(e.currentTarget as HTMLElement, e.pointerId);
   }
 
   function skyDown(e: PointerEvent): void {
@@ -404,7 +405,7 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
     if (hit >= 0) {
       const b = placed[hit];
       drag = { type: b.type, from: hit, pointerId: e.pointerId, sx: e.clientX, sy: e.clientY, moved: false, off: { x: b.x - w.x, y: b.y - w.y }, pos: { x: b.x, y: b.y } };
-      canvas.setPointerCapture(e.pointerId);
+      capturePointer(canvas, e.pointerId);
     }
     changed(); // the Remove/Reset slot follows the selection
   }
@@ -527,13 +528,17 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
   changed();
   fit();
   resize();
+  // Web fonts can land after the first fit and make the panel taller: fit again (not mid-flight).
+  document.fonts?.ready.then(() => {
+    if (!disposed && !sim) onWindowResize();
+  });
   if (!document.hidden) raf = requestAnimationFrame(frame);
 
   return () => {
     disposed = true;
     cancelAnimationFrame(raf);
     clearTimeout(toastTimer);
-    clearTimeout(winTimer);
+    cancelWin();
     ro?.disconnect();
     document.removeEventListener('visibilitychange', onVisibility);
     window.removeEventListener('resize', onWindowResize);

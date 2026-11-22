@@ -1,0 +1,24 @@
+{
+  "id": "05",
+  "title": "Late news",
+  "hint": "Watch the colony's messages. They travel at light speed, so they are always old news.",
+  "insight": "You heard about the change only when its light reached you, and acting on it quickly still paid off.",
+  "star": "Wolf 359",
+  "distance": 7.86,
+  "gLimit": 1,
+  "ripen": 5,
+  "leverMax": 0.99,
+  "deadline": 12.5,
+  "marks": [
+    11.9,
+    11.2
+  ],
+  "messages": [
+    {
+      "at": 1.0,
+      "text": "The strain has changed: the culture now needs 7 years.",
+      "ripen": 7
+    }
+  ],
+  "roundTrip": false
+}
