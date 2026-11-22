@@ -95,8 +95,6 @@ export function bodyColor(t: BodyType): string {
 export const ARROW_GAIN = 0.04;
 /** The longest any pull arrow may be, as a fraction of the sky's side. */
 export const ARROW_CAP = 0.32;
-/** A nonzero pull never draws shorter than this (CSS px), so it stays visible. */
-const ARROW_MIN_PX = 6;
 
 /**
  * The pull arrows as drawn, in CSS px, on a sky `side` px wide. Every arrow (one
@@ -257,7 +255,7 @@ function pullArrows(g: CanvasRenderingContext2D, v: View, start: Point, bodies: 
     if (!(m > 0) || !Number.isFinite(m)) return;
     g.strokeStyle = color;
     g.lineWidth = width * u;
-    arrow(g, start, a.x / m, a.y / m, Math.max(m, ARROW_MIN_PX) * u, (width + 6) * u);
+    arrow(g, start, a.x / m, a.y / m, m * u, (width + 6) * u); // true length, so the arrows still add up exactly
   };
   g.save();
   g.lineCap = 'round';

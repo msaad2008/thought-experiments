@@ -10,6 +10,8 @@ const K = SIDE / 1000;
 const TRAY = new DOMRect(0, 420, SIDE, 60);
 
 let dispose: (() => void) | null = null;
+/** What ctx.paused() answers: true while the Physics panel would be open. */
+let pausedNow = false;
 const errors: unknown[] = [];
 const onError = (e: ErrorEvent) => errors.push(e.error);
 
@@ -20,6 +22,7 @@ afterEach(() => {
   errors.length = 0;
   vi.restoreAllMocks();
   document.body.replaceChildren();
+  pausedNow = false;
 });
 
 function setup(index: number, classroom = false, keepSetup = false) {
@@ -33,7 +36,7 @@ function setup(index: number, classroom = false, keepSetup = false) {
   document.body.append(stage);
   const complete = vi.fn();
   const levels = vi.fn();
-  dispose = startLevel(index, { stage, upgrades: new Set(), classroom, keepSetup, complete, levels });
+  dispose = startLevel(index, { stage, upgrades: new Set(), classroom, keepSetup, complete, levels, paused: () => pausedNow });
   const tray = stage.querySelector<HTMLElement>('.gv-tray')!;
   vi.spyOn(tray, 'getBoundingClientRect').mockReturnValue(TRAY);
   const items = [...stage.querySelectorAll<HTMLButtonElement>('.gv-item')];
@@ -183,7 +186,7 @@ test('While a placed body is selected the slot is a red Remove, which sends it b
 });
 
 /** Flies level 01's solution at a playback speed, one 16.7 ms frame at a time (with an occasional long stall). */
-function flyLevel01(speed: string, stall: boolean) {
+function flyLevel01(speed: string, stall: boolean, pausedFrames = 0) {
   let next = null as FrameRequestCallback | null;
   vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => ((next = cb), 1));
   vi.stubGlobal('cancelAnimationFrame', () => {});
@@ -195,6 +198,10 @@ function flyLevel01(speed: string, stall: boolean) {
     s.launch.click();
     while (s.reset.textContent !== `Speed ${speed}`) s.reset.click();
     let t = 0;
+    pausedNow = pausedFrames > 0;
+    for (let i = 0; i < pausedFrames; i++) next?.((t += 1000 / 60));
+    pausedNow = false;
+    if (pausedFrames > 0) expect(s.launch.textContent).toBe('Stop'); // still mid-flight: nothing moved
     for (let i = 0; i < 20000 && !s.launch.disabled; i++) {
       t += stall && i % 40 === 39 ? 500 : 1000 / 60;
       next?.(t);
@@ -213,7 +220,8 @@ function flyLevel01(speed: string, stall: boolean) {
 }
 
 test('The flight speed changes only the watching: every speed, with or without stalls, gives the same win', () => {
-  const runs = [flyLevel01('1×', false), flyLevel01('4×', false), flyLevel01('½×', false), flyLevel01('4×', true)];
+  // The last run also sits behind the Physics panel for a minute first.
+  const runs = [flyLevel01('1×', false), flyLevel01('4×', false), flyLevel01('½×', false), flyLevel01('4×', true), flyLevel01('1×', false, 3600)];
   for (const calls of runs) {
     expect(calls).toHaveLength(1);
     expect(calls[0][0]).toBe(3);
@@ -238,4 +246,29 @@ test('The Levels button leaves for the level select', () => {
   expect(s.levelsBtn.textContent).toBe('Levels');
   s.levelsBtn.click();
   expect(s.levels).toHaveBeenCalledTimes(1);
+});
+
+test('Space selects each placed body in turn, for keyboard players', () => {
+  const s = setup(1);
+  trayDrop(s, 0, 360, 250);
+  trayDrop(s, 0, 600, 420);
+  const status = s.stage.querySelector('[aria-live]')!;
+  const space = () => s.canvas.dispatchEvent(new KeyboardEvent('keydown', { key: ' ', bubbles: true, cancelable: true }));
+  space();
+  expect(status.textContent).toBe('Moon 1 of 2 selected, at 360, 250.');
+  space();
+  expect(status.textContent).toBe('Moon 2 of 2 selected, at 600, 420.');
+  expect(s.reset.textContent).toBe('Remove');
+});
+
+test('A message is announced once: the toast itself is hidden from screen readers', () => {
+  const s = setup(1);
+  trayDrop(s, 0, 360, 250);
+  ptr(s.canvas, 'pointerdown', 360 * K, 250 * K);
+  ptr(s.canvas, 'pointermove', 5 * K, 5 * K); // a moon can't sit in the corner
+  ptr(s.canvas, 'pointerup', 5 * K, 5 * K);
+  const toast = s.stage.querySelector('.gv-toast')!;
+  expect(toast.textContent).toBe("It doesn't fit there.");
+  expect(toast.getAttribute('aria-hidden')).toBe('true');
+  expect(s.stage.querySelector('[aria-live]')!.textContent).toBe("It doesn't fit there.");
 });

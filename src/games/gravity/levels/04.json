@@ -1,8 +1,8 @@
 {
   "id": "04",
   "title": "Small and dense",
-  "hint": "A white dwarf packs more mass than a brown dwarf into a ball about half as wide, so you can fly much closer to it.",
-  "insight": "Outside a body, its pull depends only on its mass and your distance; being dense adds no pull, but a small, dense body lets you fly closer, where the pull is much stronger.",
+  "hint": "A white dwarf packs more mass than a brown dwarf into a ball about half as wide, so the ship can pass much closer to it.",
+  "insight": "Outside a body, its pull depends only on its mass and your distance; being dense adds no pull, but a small, dense body lets the ship pass closer, where the pull is much stronger.",
   "ship": { "x": 880, "y": 140, "vx": -97, "vy": 0 },
   "goal": { "x": 487, "y": 604, "r": 40 },
   "stars": [
