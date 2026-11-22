@@ -84,22 +84,22 @@ const N = Math.round(photonMassRatio(leverToEta(bestLever(L2, new Set()), L2.lev
 export const PHYSICS_HTML = `
 <h3>Time dilation</h3>
 <p class="eq">γ = 1/√(1 − v²/c²)</p>
-<p>v is your speed and c is the speed of light. Picture a clock made of a light pulse bouncing between two mirrors. When the clock moves, the pulse has to travel a longer zigzag path, but light always goes at c, so each tick takes longer. Seen from the frame the clock moves through, it ticks slower by the factor γ.</p>
+<p>v is your speed and c is the speed of light. Picture a clock made of a light pulse bouncing between two mirrors. Seen from a frame the clock moves through, the pulse travels a longer zigzag path, but light always goes at c, so each tick takes longer. That clock ticks slower by the factor γ.</p>
 
 <h3>Slowing looks mutual, arriving does not</h3>
-<p>Imagine a line of clocks along the route, all at rest relative to Earth and the colony and synchronized with each other. As you fly past them, each one you pass ticks slow compared with your own clock. And from the ship's frame, the clocks of the line, Earth and the colony all run slow. Coasting is symmetric, and neither side is "really" slow.</p>
-<p>The reading when you stop is not symmetric. When you read the colony's clock face to face, there is one reading and nothing to argue about. Your clock shows less time, because you were the one who sped up, turned around and slowed down. The same goes for the trip home.</p>
+<p>Imagine a line of clocks along the route, all at rest relative to Earth and the colony and synchronized with each other. As you fly past, the clock beside you always reads further ahead than yours: measured by the line, your clock runs slow. That is the big Earth &amp; colony clock in the game. In the ship's frame it is the line's clocks that each tick slow, but in that frame they are not synchronized (the ones ahead of you are set further ahead), so each one you reach still reads ahead of yours. While you coast, both views hold, and neither clock is “really” slow.</p>
+<p>The reading when you stop is not symmetric. When you read the colony's clock face to face, there is one reading and nothing to argue about. Your clock shows less time, because you changed speed (sped up and slowed down, and on round trips turned around), while Earth and the colony never did. The same goes for the trip home.</p>
 
 <h3>Speeding up</h3>
 <p class="eq">v = c·tanh(gτ/c)</p>
-<p>At a steady acceleration g, measured on the ship, your speed creeps toward c without ever reaching it. τ is the time on your clock. Most of the effect is felt near the end, where each extra bit of speed costs a lot.</p>
+<p>At a steady acceleration g, measured on the ship, your speed creeps toward c without ever reaching it. τ is the time on your clock. Near c, each extra bit of speed takes much more time on your clock, and that is where γ shoots up.</p>
 
 <h3>Stopping</h3>
 <p class="eq">d = (c²/a)(γ − 1)</p>
-<p>To stop at the colony you have to start braking this far away. It grows quickly with γ, so a fast ship must brake from far out.</p>
+<p>Here a is your braking acceleration (the crew's g limit), and d is measured in the colony's frame. To stop at the colony you have to start braking this far away. d grows in step with γ, which shoots up near c, so a fast ship must brake from far out.</p>
 
 <h3>News and light delay</h3>
-<p>News from the colony travels at the speed of light, so it is old when it arrives. The ship receives it later still the further along it is, and a message sent in year t reaches a point a distance d away in year t + d. In the game, news always says when it was sent.</p>
+<p>News from the colony travels at the speed of light, so it is old when it arrives. The closer the ship gets to the colony, the fresher the news: a message sent in year t reaches a point d light-years from the colony in year t + d. In the game, news always says when it was sent.</p>
 
 <h3>The view ahead</h3>
 <p>At high speed the stars bunch toward the direction you are flying (aberration), and light from ahead looks bluer and brighter while light from behind looks redder (the Doppler effect). The view ahead shows both.</p>
@@ -111,7 +111,7 @@ export const PHYSICS_HTML = `
 <ul>
   <li>The trip plays as a time-lapse.</li>
   <li>The colonies are invented. The stars and their distances are real.</li>
-  <li>Fuel is ignored. A perfect photon rocket on level 2's best trip would need about ${N} kilograms of fuel for every kilogram of ship.</li>
+  <li>Fuel is ignored. Even a perfect photon rocket on level 2's best trip would need about ${N} kilograms of fuel for every kilogram of ship.</li>
   <li>The ship is a point that turns around instantly.</li>
   <li>Earth and the colonies are treated as at rest relative to each other.</li>
 </ul>
