@@ -15,6 +15,8 @@ export interface IntroCard {
 export interface LevelContext {
   stage: HTMLElement;
   upgrades: ReadonlySet<string>;
+  /** Classroom mode: a teacher is driving, so a game may offer extras such as showing a solution. */
+  classroom: boolean;
   /** Shows the level end; mount records progress and tracks it. */
   complete(stars: number, insight: string): void;
   /** Leaves the level for the level select. */

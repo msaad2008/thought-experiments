@@ -24,6 +24,43 @@ export function fitView(w: number, h: number, dpr: number): View {
   return { k, ox: (w - WORLD * k) / 2, oy: (h - WORLD * k) / 2, w, h, dpr };
 }
 
+/** A point on a flight path, with the ship's speed there. */
+export type TrailPoint = Point & { v: number };
+
+/**
+ * How fast the ship is going compared with its launch speed, on a −1..1 scale:
+ * 0 at launch speed, 1 at twice it or faster, −1 at half it or slower
+ * (flights in the levels mostly stay within that range).
+ */
+export function speedLevel(v: number, v0: number): number {
+  if (!(v > 0) || !(v0 > 0)) return 0;
+  return Math.max(-1, Math.min(1, Math.log2(v / v0)));
+}
+
+/** Trail colour: dim violet when slow, white at launch speed, bright gold when fast. */
+function trailStyle(level: number, fade: number): { color: string; width: number } {
+  const slow = [150, 140, 220], mid = [255, 255, 255], fast = [255, 210, 94];
+  const [a, b, t] = level < 0 ? [mid, slow, -level] : [mid, fast, level];
+  const c = a.map((x, i) => Math.round(x + (b[i] - x) * t));
+  const alpha = (0.7 + 0.3 * level) * fade;
+  return { color: `rgba(${c[0]},${c[1]},${c[2]},${alpha.toFixed(3)})`, width: 2.5 + level };
+}
+
+/** Draws a path in runs of one colour, so it brightens where the ship speeds up. */
+function speedPath(g: CanvasRenderingContext2D, pts: TrailPoint[], v0: number, u: number, fade: number): void {
+  const STEPS = 6; // colour bands per half of the scale
+  let i = 1;
+  while (i < pts.length) {
+    const band = Math.round(speedLevel((pts[i - 1].v + pts[i].v) / 2, v0) * STEPS);
+    const start = i - 1;
+    while (i < pts.length && Math.round(speedLevel((pts[i - 1].v + pts[i].v) / 2, v0) * STEPS) === band) i++;
+    const st = trailStyle(band / STEPS, fade);
+    g.strokeStyle = st.color;
+    g.lineWidth = st.width * u;
+    polyline(g, pts.slice(start, i));
+  }
+}
+
 export interface Scene {
   level: Level;
   placed: Body[];
@@ -34,8 +71,8 @@ export interface Scene {
   ship: Ship;
   editing: boolean;
   collected: ReadonlySet<number>;
-  trail: Point[];
-  lastPath: Point[];
+  trail: TrailPoint[];
+  lastPath: TrailPoint[];
   aim: Point[];
   /** Seconds, for the beacon pulse. */
   time: number;
@@ -305,11 +342,8 @@ export function drawScene(g: CanvasRenderingContext2D, v: View, s: Scene): void 
   g.save();
   g.lineCap = 'round';
   g.lineJoin = 'round';
-  if (s.lastPath.length > 1) {
-    g.strokeStyle = 'rgba(200,194,240,0.3)';
-    g.lineWidth = 2 * u;
-    polyline(g, s.lastPath);
-  }
+  const v0 = Math.hypot(level.ship.vx, level.ship.vy);
+  if (s.lastPath.length > 1) speedPath(g, s.lastPath, v0, u, 0.4);
   if (s.editing && s.aim.length > 1) {
     g.strokeStyle = 'rgba(255,210,94,0.85)';
     g.lineWidth = 2.5 * u;
@@ -317,11 +351,7 @@ export function drawScene(g: CanvasRenderingContext2D, v: View, s: Scene): void 
     polyline(g, s.aim);
     g.setLineDash([]);
   }
-  if (s.trail.length > 1) {
-    g.strokeStyle = 'rgba(255,255,255,0.7)';
-    g.lineWidth = 2.5 * u;
-    polyline(g, s.trail);
-  }
+  if (s.trail.length > 1) speedPath(g, s.trail, v0, u, 1);
   g.restore();
 
   // Stars.

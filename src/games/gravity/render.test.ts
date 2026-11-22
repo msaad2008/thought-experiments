@@ -1,5 +1,5 @@
 import { test, expect } from 'vitest';
-import { ARROW_CAP, ARROW_GAIN, arrowVectors, fitView } from './render';
+import { ARROW_CAP, ARROW_GAIN, arrowVectors, fitView, speedLevel } from './render';
 import { pulls, type Body, type Point } from './physics';
 
 const len = (p: Point) => Math.hypot(p.x, p.y);
@@ -61,4 +61,15 @@ test('fitView: the square world fits the box and is centred', () => {
   expect(v.k).toBe(0.3);
   expect(v.ox).toBe(50);
   expect(v.oy).toBe(0);
+});
+
+test('speedLevel: 0 at launch speed, rising as the ship speeds up, capped at ±1', () => {
+  expect(speedLevel(120, 120)).toBe(0);
+  expect(speedLevel(170, 120)).toBeCloseTo(Math.log2(170 / 120), 12);
+  expect(speedLevel(240, 120)).toBe(1);
+  expect(speedLevel(5000, 120)).toBe(1);
+  expect(speedLevel(60, 120)).toBe(-1);
+  expect(speedLevel(70, 120)).toBeLessThan(speedLevel(90, 120));
+  expect(speedLevel(0, 120)).toBe(0);
+  expect(speedLevel(NaN, 120)).toBe(0);
 });
