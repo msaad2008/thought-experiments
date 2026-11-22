@@ -10,6 +10,7 @@ import {
   type GameProgress,
 } from '../shared/progress';
 import { trackLevelComplete } from '../shared/analytics';
+import { GAMES } from '../site/games';
 import { canBuy, isUnlocked, ownedUpgrades } from './rules';
 import type { GameConfig } from './types';
 
@@ -41,6 +42,8 @@ export function mountGame(cfg: GameConfig, root: HTMLElement): void {
 
   root.innerHTML = '';
   root.classList.add('game');
+  const accent = GAMES.find((g) => g.id === cfg.id)?.accent;
+  if (accent) root.style.setProperty('--accent', accent);
 
   // ----- game bar -----
   const bar = el('header', 'gamebar');
@@ -230,6 +233,7 @@ export function mountGame(cfg: GameConfig, root: HTMLElement): void {
       upgrades: ownedUpgrades(cfg.upgrades, progress, classroom),
       classroom,
       keepSetup,
+      paused: () => dlg.open || dlg.hasAttribute('open'),
       levels: () => showSelect(),
       complete(starCount, insight) {
         if (classroom) {

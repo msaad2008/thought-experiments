@@ -21,6 +21,8 @@ export interface LevelContext {
   keepSetup: boolean;
   /** Shows the level end; mount records progress and tracks it. */
   complete(stars: number, insight: string): void;
+  /** True while something covers the level (the Physics panel): a game holds its clock still. */
+  paused(): boolean;
   /** Leaves the level for the level select. */
   levels(): void;
 }

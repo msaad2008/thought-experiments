@@ -19,7 +19,7 @@ export const INTRO: IntroCard[] = [
     ),
   },
   {
-    text: 'So you place moons and stars in its way, and let gravity do the steering.',
+    text: 'So you place moons and other bodies in its way, and let gravity do the steering.',
     art: svg(
       '<path d="M15 40 C80 25 150 30 185 100" stroke="#c8c2f0" stroke-width="3" fill="none" stroke-dasharray="2 8" stroke-linecap="round"/>' +
         '<circle cx="110" cy="85" r="18" fill="#6c63d6"/><circle cx="15" cy="40" r="6" fill="#ff7a3d"/>',

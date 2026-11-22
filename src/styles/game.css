@@ -1,8 +1,6 @@
 /* Shared game UI: game bar, views, Physics sheet. Game-agnostic. */
 
-:root {
-  --accent: #ff7a3d;
-}
+/* --accent is set per game by mountGame, from src/site/games.ts. */
 
 .game {
   min-height: 100dvh;

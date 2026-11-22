@@ -79,14 +79,15 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
   const sky = el('div', 'gv-sky');
   const canvas = el('canvas', 'gv-canvas');
   canvas.tabIndex = 0;
+  canvas.setAttribute('role', 'application');
   canvas.setAttribute(
     'aria-label',
-    'Sky. Place bodies from the tray. With a body selected, arrow keys move it, Delete removes it, Enter launches.',
+    'Sky. Place bodies from the tray. Space selects the next placed body, arrow keys move it, Delete removes it, Enter launches.',
   );
   const clock = el('div', 'gv-clock');
   clock.hidden = true;
   const toast = el('div', 'gv-toast');
-  toast.setAttribute('role', 'status');
+  toast.setAttribute('aria-hidden', 'true'); // screen readers hear it once, through the status line
   sky.append(canvas, clock, toast);
 
   const panel = el('div', 'gv-panel');
@@ -133,7 +134,6 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
       solutionAt = performance.now();
       changed();
       showToast('Solution placed. Press Launch to watch it.');
-      say('Solution placed. Press Launch to watch it.');
     } else {
       if (performance.now() - solutionAt < 800) return;
       placed = [];
@@ -158,6 +158,7 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
   const name = (t: BodyType) => BODY_TYPES[t].name.toLowerCase();
 
   function showToast(text: string): void {
+    say(text);
     toast.textContent = text;
     toast.classList.add('on');
     clearTimeout(toastTimer);
@@ -195,11 +196,12 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
     else resetBtn.removeAttribute('aria-label');
     resetBtn.disabled = finished || (!sim && !solution && placed.length === 0);
     levelsBtn.disabled = finished; // the level end is on its way
+    if (reduced) draw(); // with reduced motion an idle sky is not redrawn every frame
   }
 
   /**
    * Phones (single column): size the sky so it, the hint, the tray and the
-   * buttons all fit the viewport height without scrolling (never below 280 px).
+   * buttons all fit the viewport height without scrolling (never below 200 px).
    */
   function fit(): void {
     if (window.matchMedia?.('(min-width: 900px)').matches) {
@@ -212,7 +214,7 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
     const rest = root.getBoundingClientRect().height - s.height; // gap + panel
     const border = s.height - sky.clientHeight; // style.width sets the content box
     const avail = window.innerHeight - (s.top + window.scrollY) - rest - padBottom;
-    sky.style.width = `${Math.max(280, Math.min(root.clientWidth, Math.floor(avail)) - border)}px`;
+    sky.style.width = `${Math.max(200, Math.min(root.clientWidth, Math.floor(avail)) - border)}px`;
   }
 
   function onWindowResize(): void {
@@ -339,7 +341,6 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
     } else text = MISS[outcome];
     endFlight();
     showToast(text);
-    say(text);
   }
 
   function frame(t: number): void {
@@ -348,7 +349,7 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
     const dt = lastT === null ? 0 : Math.min(0.1, Math.max(0, sec - lastT));
     lastT = sec;
     now += dt;
-    if (sim && !sim.outcome) {
+    if (sim && !sim.outcome && !ctx.paused()) {
       acc += dt * flightSpeed; // faster or slower watching; the same whole DT steps
       while (acc >= DT && !sim.outcome) {
         sim.step();
@@ -357,7 +358,7 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
       }
       if (sim.outcome) landed(sim, sim.outcome);
     }
-    draw();
+    if (sim || !reduced) draw();
   }
 
   function onVisibility(): void {
@@ -496,6 +497,14 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
     if (e.key === 'Enter' && !onButton) {
       e.preventDefault();
       launch();
+      return;
+    }
+    if (e.key === ' ' && !onButton && placed.length > 0) {
+      e.preventDefault();
+      selected = (selected + 1) % placed.length;
+      const b = placed[selected];
+      changed();
+      say(`${BODY_TYPES[b.type].name} ${selected + 1} of ${placed.length} selected, at ${Math.round(b.x)}, ${Math.round(b.y)}.`);
       return;
     }
     if (selected < 0) return;
