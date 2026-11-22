@@ -119,7 +119,7 @@ describe('relativity render', () => {
     const l = LEVELS[1];
     const svg = predictorSvg(l, predictorCurve(l, NONE), 0.5, 13.4812);
     expect(svg).toContain('role="img"');
-    expect(svg).toContain('aria-label="Delivery year against your speed setting. Delivers about year 13.48. Earliest delivery: best about 0.84 c."');
+    expect(svg).toContain('aria-label="Delivery year against your speed setting. Delivers about year 13.49. Earliest delivery: best about 0.84 c."');
   });
 
   it('the predictor dips at the best lever', () => {

@@ -11,7 +11,7 @@ vi.mock('./render', async (importOriginal) => {
 import { fitSky } from '../../game-ui/fit';
 import { drawScene, liveCurve, predictorCurve, predictorSvg, type Scene } from './render';
 import { startLevel } from './play';
-import { LEVELS, bestLever, course, deliveryFor, ripenTime } from './levels';
+import { LEVELS, bestLever, course, deliveryFor, fmtDelivery, ripenTime } from './levels';
 import { AT_REST, START_BETA, advance, deliveryYear, etaToLever, leverToEta } from './physics';
 
 const L01 = 0, L02 = 1, L03 = 2, L05 = 4, L07 = 6, L08 = 7;
@@ -224,7 +224,7 @@ test('launch, fly, dock and deliver: level 02 at its best lever gives 3 stars', 
   expect(frames).toBeGreaterThan(1800); // about 35 s of flight, plus any ripening
   expect(frames).toBeLessThan(2400);
   const e = expected(L02, best);
-  expect(s.status()).toBe(`Delivered in year ${e.year.toFixed(2)}.`);
+  expect(s.status()).toBe(`Delivered in year ${fmtDelivery(e.year)}.`);
   expect(s.toast.textContent).toBe(s.status());
   expect(log).toContain('Braking for the colony.');
   expect(log.indexOf('Braking for the colony.')).toBeGreaterThan(log.indexOf('Launched.'));
@@ -234,7 +234,7 @@ test('launch, fly, dock and deliver: level 02 at its best lever gives 3 stars', 
   expect(s.complete).not.toHaveBeenCalled();
   vi.advanceTimersByTime(1);
   expect(s.complete).toHaveBeenCalledTimes(1);
-  expect(s.complete).toHaveBeenCalledWith(3, `${s.level.insight} Colony clocks: ${e.year.toFixed(2)} years. Yours: ${e.tau.toFixed(1)}.`);
+  expect(s.complete).toHaveBeenCalledWith(3, `${s.level.insight} Colony clocks: ${fmtDelivery(e.year)} years. Yours: ${e.tau.toFixed(1)}.`);
   const sc = look();
   expect(sc.phase).toBe('done');
   expect(sc.ship.x).toBe(s.level.distance);
@@ -309,7 +309,7 @@ test('arriving unripe waits, then delivers', () => {
   expect(look().phase).toBe('ripening');
   const frames = until(delivered(s));
   expect(frames).toBeLessThanOrEqual(3 * 60 + 2); // a ripening wait plays in at most 3 s
-  expect(s.status()).toBe(`Delivered in year ${deliveryFor(s.level, NONE, 1).toFixed(2)}.`);
+  expect(s.status()).toBe(`Delivered in year ${fmtDelivery(deliveryFor(s.level, NONE, 1))}.`);
   expect(s.text('.ar-culture')).toBe('Culture 100% of 8.0 yr');
   vi.advanceTimersByTime(1200);
   expect(s.complete).toHaveBeenCalledWith(1, expect.stringContaining('Colony clocks:'));
@@ -446,9 +446,9 @@ test('level 05: the news arrives late and changes the culture', () => {
   expect(s.text('.ar-news')).toBe(msg); // the message stays on show
   until(delivered(s));
   const e = expected(L05, best, NONE, 7);
-  expect(s.status()).toBe(`Delivered in year ${e.year.toFixed(2)}.`);
+  expect(s.status()).toBe(`Delivered in year ${fmtDelivery(e.year)}.`);
   vi.advanceTimersByTime(1200);
-  expect(s.complete).toHaveBeenCalledWith(2, expect.stringContaining(`Colony clocks: ${e.year.toFixed(2)} years.`));
+  expect(s.complete).toHaveBeenCalledWith(2, expect.stringContaining(`Colony clocks: ${fmtDelivery(e.year)} years.`));
   expect(log.filter((l) => l === msg)).toHaveLength(1);
   fresh();
 
@@ -467,7 +467,7 @@ test('a round trip flies home and compares twins', () => {
   click(s.primary);
   until(delivered(s));
   const e = expected(L07, best);
-  expect(s.status()).toBe(`Delivered in year ${e.year.toFixed(2)}.`);
+  expect(s.status()).toBe(`Delivered in year ${fmtDelivery(e.year)}.`);
   let sc = look();
   expect(sc.phase).toBe('return');
   expect(sc.heading).toBe(-1);
@@ -603,7 +603,7 @@ test('the Arrival predictor shows only when owned, with its words as page text',
   const start = Number(START(L02)) / 1000;
   expect(graph.innerHTML).toBe(parsed(predictorSvg(s.level, predictorCurve(s.level, ups), start, deliveryFor(s.level, ups, start))));
   setLever(s, 700);
-  const year = deliveryFor(s.level, ups, 0.7).toFixed(2);
+  const year = fmtDelivery(deliveryFor(s.level, ups, 0.7));
   expect(graph.innerHTML).toBe(parsed(predictorSvg(s.level, predictorCurve(s.level, ups), 0.7, deliveryFor(s.level, ups, 0.7))));
   expect(s.text('.ar-pred-caption')).toBe(`Delivers about year ${year}`);
   expect(graph.querySelector('svg')!.getAttribute('role')).toBe('img');
@@ -667,7 +667,7 @@ test('the delivery year is shown to 2 decimals, so it never contradicts the star
   const i = years.reduce((b, y, j) => (Math.abs(y - 13.74) < Math.abs(years[b] - 13.74) ? j : b), 0);
   const d = years[i];
   expect(d).toBeGreaterThan(l.marks[1]); // 2 stars, though one decimal would say "13.7"
-  expect(d.toFixed(2)).toBe('13.74');
+  expect(fmtDelivery(d)).toBe('13.74');
   const s = setup(L02);
   setLever(s, i);
   click(s.primary);
@@ -709,4 +709,18 @@ test('the sky is re-fitted when the panel changes height, once at launch, but ne
   expect(fits()).toBe(n + 1); // not mid-flight
   click(s.middle);
   expect(fits()).toBe(n + 1);
+});
+
+test('a delivery a hair past a star mark is shown rounded up, never as the mark', () => {
+  const l = LEVELS[L01];
+  const d = deliveryFor(l, NONE, 0.711);
+  expect(d).toBeGreaterThan(l.marks[1]); // just past ★★★ 6.0
+  expect(d).toBeLessThan(6.005); // round-to-nearest would have said "6.00"
+  const s = setup(L01);
+  setLever(s, 711);
+  click(s.primary);
+  until(delivered(s));
+  expect(s.status()).toBe('Delivered in year 6.01.');
+  vi.advanceTimersByTime(1200);
+  expect(s.complete).toHaveBeenCalledWith(2, expect.stringContaining('Colony clocks: 6.01 years.'));
 });

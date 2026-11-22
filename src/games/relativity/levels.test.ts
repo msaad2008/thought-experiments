@@ -1,7 +1,7 @@
 // Proves the eight levels have the agreed shape and hit the star targets, by flying every one of the
 // 1001 lever settings with the exact physics. Level 05 is checked with a switch-on-the-news flight.
 import { describe, expect, it } from 'vitest';
-import { LEVELS, bestLever, course, deliveryFor, ripenTime, shipYearsPerSecond, starsFor, type Level } from './levels';
+import { LEVELS, bestLever, course, deliveryFor, fmtDelivery, ripenTime, shipYearsPerSecond, starsFor, type Level } from './levels';
 import {
   AT_REST, LEVER_STEPS, RETURN_SECONDS, RIPEN_MAX_SECONDS, START_BETA, TRIP_SECONDS, advance, deliveryYear, etaToLever, leverToEta, seenColonyYear,
 } from './physics';
@@ -107,5 +107,27 @@ describe('relativity levels', () => {
     expect(course(l, new Set(['couch'])).accel).toBeCloseTo(1.5 * course(l, NONE).accel, 12);
     expect(ripenTime(l, new Set(['incubator']))).toBeCloseTo(1.6, 12);
     expect(ripenTime(l, new Set(['incubator']), 7)).toBeCloseTo(5.6, 12);
+  });
+});
+
+describe('fmtDelivery', () => {
+  it('rounds up to hundredths, so a year past a mark never reads as the mark', () => {
+    expect(fmtDelivery(6.0012)).toBe('6.01');
+    expect(fmtDelivery(6)).toBe('6.00');
+    expect(fmtDelivery(13.74)).toBe('13.74');
+    expect(fmtDelivery(13.7401)).toBe('13.75');
+  });
+
+  it('every lever setting on every level: the shown year is at or below a mark only when it scores that mark', () => {
+    const NONE = new Set<string>();
+    for (const l of LEVELS) {
+      for (let i = 0; i <= 1000; i++) {
+        const y = deliveryFor(l, NONE, i / 1000);
+        if (!Number.isFinite(y)) continue;
+        const shown = Number(fmtDelivery(y));
+        expect(shown).toBeGreaterThanOrEqual(y);
+        expect(starsFor(l, shown)).toBe(starsFor(l, y));
+      }
+    }
   });
 });

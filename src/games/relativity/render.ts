@@ -2,7 +2,7 @@
 // Everything is drawn in a 100 × 100 square (top 70 the window, bottom 30 the route); the canvas
 // transform maps that square to device pixels, so line widths and font sizes are in those units.
 import {
-  bestLever, deliveryFor, type Level,
+  bestLever, deliveryFor, fmtDelivery, type Level,
 } from './levels';
 import {
   aberrate, advance, brakePoint, deliveryYear, doppler, leverToEta, starColour,
@@ -283,7 +283,7 @@ export function predictorSvg(l: Level, curve: Curve, lever: number, here: number
   const yOf = (year: number) => bot - (clamp(fin(year, hi), lo, hi) - lo) / (hi - lo) * (bot - top);
   const d = vals.map((y, i) => `${i ? 'L' : 'M'}${((i / N_PTS) * W).toFixed(2)} ${yOf(y).toFixed(2)}`).join(' ');
   const s = clamp(fin(lever), 0, 1);
-  const label = `Delivery year against your speed setting. Delivers about year ${fin(here).toFixed(2)}.`
+  const label = `Delivery year against your speed setting. Delivers about year ${fmtDelivery(fin(here))}.`
     + (bestSpeed === null ? '' : ` Earliest delivery: best about ${bestSpeed.toFixed(2)} c.`);
   const ns = 'vector-effect="non-scaling-stroke"';
   const marks = [[l.marks[1], GOLD, '6 4'], [l.marks[0], ACCENT, '6 4'], [l.deadline, TEXT, '2 3']] as const;

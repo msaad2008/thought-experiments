@@ -4,7 +4,7 @@
 import { fitSky } from '../../game-ui/fit';
 import { afterUnpaused } from '../../game-ui/play-helpers';
 import type { LevelContext } from '../../game-ui/types';
-import { LEVELS, bestLever, course as courseFor, deliveryFor, ripenTime, shipYearsPerSecond, starsFor } from './levels';
+import { LEVELS, bestLever, course as courseFor, deliveryFor, fmtDelivery, ripenTime, shipYearsPerSecond, starsFor } from './levels';
 import {
   AT_REST, G_LY, RETURN_SECONDS, RIPEN_MAX_SECONDS, START_BETA, advance, deliveryYear, docked, etaStop, etaToLever, leverToEta,
   seenColonyYear, type Ship,
@@ -269,7 +269,7 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
       predictedAt = frameMs;
     }
     graph.innerHTML = predictorSvg(level, curve, s, here);
-    caption.textContent = `Delivers about year ${here.toFixed(2)}`;
+    caption.textContent = `Delivers about year ${fmtDelivery(here)}`;
   }
 
   /** Phones: the sky and the panel fit the viewport height without scrolling. */
@@ -404,8 +404,8 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
     deliveredYear = ship.t;
     const stars = starsFor(level, deliveredYear);
     if (stars >= 1) launchLever.set(level.id, launchValue);
-    // Two decimals wherever the delivery year is shown: 13.74 must not read as "13.7" next to "★★★ 13.7".
-    const text = `Delivered in year ${deliveredYear.toFixed(2)}.`;
+    // Two decimals, rounded up, wherever the delivery year is shown: 13.74 must not read as "13.7" next to "★★★ 13.7".
+    const text = `Delivered in year ${fmtDelivery(deliveredYear)}.`;
     if (level.roundTrip) {
       phase = 'return';
       home = AT_REST;
@@ -418,7 +418,7 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
     phase = 'done';
     changed();
     showToast(text);
-    finish(stars, `${level.insight} Colony clocks: ${deliveredYear.toFixed(2)} years. Yours: ${ship.tau.toFixed(1)}.`);
+    finish(stars, `${level.insight} Colony clocks: ${fmtDelivery(deliveredYear)} years. Yours: ${ship.tau.toFixed(1)}.`);
   }
 
   function arriveHome(): void {

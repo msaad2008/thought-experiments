@@ -60,6 +60,9 @@ export function starsFor(l: Level, delivered: number): 0 | 1 | 2 | 3 {
   return delivered <= l.deadline ? 1 : 0;
 }
 
+/** A delivery year to 2 decimals, rounded up, so a year just past a star mark never reads as the mark. */
+export const fmtDelivery = (y: number) => (Math.ceil(y * 100 - 1e-9) / 100).toFixed(2);
+
 /** The delivery year for a lever held at setting s (0..1) the whole trip: what is known at launch. */
 export function deliveryFor(l: Level, upgrades: ReadonlySet<string>, lever: number): number {
   const arrive = advance(AT_REST, course(l, upgrades), leverToEta(lever, l.leverMax), Infinity);
