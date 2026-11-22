@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { LEVELS, bestLever, course } from './levels';
 import { AT_REST, aberrate, doppler, leverToEta, seenColonyYear, type Ship } from './physics';
-import { STARS, drawScene, fitView, predictorSvg, projectStar, type Phase, type Scene } from './render';
+import { STARS, drawScene, fitView, predictorCurve, predictorSvg, projectStar, type Phase, type Scene } from './render';
 
 const NONE: ReadonlySet<string> = new Set();
 
@@ -73,12 +73,30 @@ describe('relativity render', () => {
   });
 
   it('light pulses travel only between the ship and the colony, and never on the way home', () => {
-    const level = LEVELS[0], c = course(level, NONE), v = fitView(360, 360, 1);
+    const level = LEVELS[0], c = course(level, NONE), v = fitView(360, 360, 1), D = level.distance;
     const ship: Ship = { eta: 0.5, x: 1, t: 3.5, tau: 3 };
-    const base: Scene = { level, ship, course: c, heading: 1, colonyYearSeen: seenColonyYear(ship, level.distance), time: 0, reducedMotion: true, phase: 'flight' };
-    const arcs = (s: Scene) => { const { g, calls } = fakeContext(); drawScene(g, v, s); return calls.filter(([k]) => k === 'arc').length; };
-    expect(arcs({ ...base, heading: -1 })).toBeLessThan(arcs(base)); // pulses are arcs
-    expect(arcs({ ...base, phase: 'brief', ship: AT_REST, colonyYearSeen: -level.distance })).toBeLessThanOrEqual(arcs({ ...base, ship: AT_REST, colonyYearSeen: -level.distance }));
+    const base: Scene = { level, ship, course: c, heading: 1, colonyYearSeen: seenColonyYear(ship, D), time: 0, reducedMotion: true, phase: 'flight' };
+    // pulses are the radius-3 glows on the route line (y = 86 in drawing units)
+    const pulses = (s: Scene) => { const { g, calls } = fakeContext(); drawScene(g, v, s); return calls.filter(([k, a]) => k === 'arc' && a[1] === 86 && a[2] === 3).map(([, a]) => a[0] as number); };
+    const xs = pulses(base);
+    expect(xs.length).toBe(3); // colony years 1, 2, 3 are on the way
+    const shipX = 14 + (ship.x / D) * 72, colonyX = 86;
+    for (const x of xs) { expect(x).toBeGreaterThanOrEqual(shipX); expect(x).toBeLessThanOrEqual(colonyX); }
+    expect(pulses({ ...base, heading: -1 })).toEqual([]);
+    expect(pulses({ ...base, phase: 'brief', ship: AT_REST, colonyYearSeen: -D })).toEqual([]);
+  });
+
+  it('the predictor curve is cached, and a new lever only moves the marker', () => {
+    const l = LEVELS[1];
+    expect(predictorCurve(l, NONE)).toBe(predictorCurve(l, new Set()));
+    expect(predictorCurve(l, new Set(['couch']))).not.toBe(predictorCurve(l, NONE));
+    const cx = (lev: number) => Number(predictorSvg(l, NONE, lev).match(/<circle[^>]* cx="([-\d.]+)"/)![1]);
+    expect(cx(0.2)).not.toBeCloseTo(cx(0.8));
+  });
+
+  it('the predictor is labelled', () => {
+    const svg = predictorSvg(LEVELS[1], NONE, 0.5);
+    for (const w of ['slower', 'faster', 'deadline', '★★★']) expect(svg).toContain(w);
   });
 
   it('the predictor dips at the best lever', () => {

@@ -41,20 +41,29 @@ export interface Scene {
 
 export interface Star { cos: number; az: number; kelvin: number; mag: number }
 
-const frac = (v: number) => v - Math.floor(v);
-const GOLDEN = (3 - Math.sqrt(5)) * Math.PI; // golden angle
+/** Small seeded PRNG (mulberry32): the same sky every time, with no visible pattern. */
+function mulberry32(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
 
 /**
- * ~300 fixed stars spread evenly over the sphere (Fibonacci spiral: cos steps evenly, azimuth by the golden angle).
- * Index 0 is the colony's star, dead ahead. Temperature and brightness come from two other irrational steps.
+ * 300 fixed stars, uniform on the sphere from a seeded PRNG (an even spiral showed up as a swirl once the sky bunched forward).
+ * Index 0 is the colony's star, dead ahead.
  */
 export const STARS: Star[] = (() => {
-  const N = 300, out: Star[] = [{ cos: 1, az: 0, kelvin: 4200, mag: 1 }];
+  const N = 300, rnd = mulberry32(20261122), out: Star[] = [{ cos: 1, az: 0, kelvin: 4200, mag: 1 }];
   for (let i = 1; i < N; i++) {
-    const f1 = frac(i * 0.7548776662466927), f2 = frac(i * 0.5698402909980532);
+    const f1 = rnd(), f2 = rnd();
     out.push({
-      cos: 1 - (2 * i) / (N - 1),
-      az: (i * GOLDEN) % TAU,
+      cos: 2 * rnd() - 1,
+      az: rnd() * TAU,
       kelvin: 3200 + 9000 * f1 * f1,
       mag: 0.25 + 0.75 * f2 * f2,
     });
@@ -121,7 +130,6 @@ function viewAhead(g: CanvasRenderingContext2D, s: Scene): void {
     }
     const r = clamp((0.3 + 0.7 * st.mag) * boost, 0.3, 1.8);
     g.globalAlpha = alpha;
-    if (r > 1) glow(g, x, y, r * 3, rgbOf(colour), 0.35);
     disc(g, x, y, r, colour);
     g.globalAlpha = 1;
   });
@@ -223,23 +231,45 @@ export function drawScene(g: CanvasRenderingContext2D, v: View, s: Scene): void 
   g.restore();
 }
 
+interface Curve { vals: number[]; best: number; bestSpeed: number; lo: number; hi: number }
+const curves = new Map<string, Curve>();
+const N_PTS = 100;
+
+/** The expensive part of the predictor (101 flights plus the best-lever scan), cached per level and upgrade set. */
+export function predictorCurve(l: Level, upgrades: ReadonlySet<string>): Curve {
+  const key = `${l.id}|${[...upgrades].sort().join(',')}`;
+  let c = curves.get(key);
+  if (!c) {
+    const vals = Array.from({ length: N_PTS + 1 }, (_, i) => deliveryFor(l, upgrades, i / N_PTS));
+    const lo = Math.min(...vals, l.marks[1]) - 0.3;
+    const hi = Math.max(lo + 1, Math.min(Math.max(...vals), l.deadline + 4));
+    const best = bestLever(l, upgrades);
+    c = { vals, best, bestSpeed: Math.tanh(leverToEta(best, l.leverMax)), lo, hi };
+    curves.set(key, c);
+  }
+  return c;
+}
+
 /** Delivery year against the lever setting for the whole lever, with the three marks and a marker at `lever`. */
 export function predictorSvg(l: Level, upgrades: ReadonlySet<string>, lever: number): string {
-  const W = 200, H = 90, top = 22, bot = 82, N = 100;
-  const vals = Array.from({ length: N + 1 }, (_, i) => deliveryFor(l, upgrades, i / N));
-  const lo = Math.min(...vals, l.marks[1]) - 0.3;
-  const hi = Math.max(lo + 1, Math.min(Math.max(...vals), l.deadline + 4));
+  const W = 200, H = 100, top = 22, bot = 82;
+  const { vals, bestSpeed, lo, hi } = predictorCurve(l, upgrades);
   const yOf = (year: number) => bot - (clamp(year, lo, hi) - lo) / (hi - lo) * (bot - top);
-  const d = vals.map((y, i) => `${i ? 'L' : 'M'}${((i / N) * W).toFixed(2)} ${yOf(y).toFixed(2)}`).join(' ');
+  const d = vals.map((y, i) => `${i ? 'L' : 'M'}${((i / N_PTS) * W).toFixed(2)} ${yOf(y).toFixed(2)}`).join(' ');
   const s = clamp(fin(lever), 0, 1);
   const here = deliveryFor(l, upgrades, s);
-  const best = bestLever(l, upgrades);
-  const bestSpeed = Math.tanh(leverToEta(best, l.leverMax));
   const label = `Delivery year against your speed setting. Earliest delivery: best about ${bestSpeed.toFixed(2)} c.`;
-  const mark = (year: number, colour: string) => `<line x1="0" y1="${yOf(year).toFixed(2)}" x2="${W}" y2="${yOf(year).toFixed(2)}" stroke="${colour}" stroke-opacity="0.7" stroke-width="1" stroke-dasharray="4 3"/>`;
+  const txt = (x: number, y: number, anchor: string, t: string, size = 9) =>
+    `<text x="${x}" y="${y.toFixed(2)}" text-anchor="${anchor}" fill="${TEXT}" font-size="${size}" font-family="sans-serif">${t}</text>`;
+  const mark = (year: number, colour: string, name: string) => {
+    const y = yOf(year);
+    return `<line x1="0" y1="${y.toFixed(2)}" x2="${W}" y2="${y.toFixed(2)}" stroke="${colour}" stroke-opacity="0.7" stroke-width="1" stroke-dasharray="4 3"/>`
+      + txt(W - 1, y - 2, 'end', name);
+  };
   return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${label}" style="overflow:visible">`
-    + mark(l.marks[1], GOLD) + mark(l.marks[0], ACCENT) + mark(l.deadline, TEXT)
+    + mark(l.marks[1], GOLD, '★★★') + mark(l.marks[0], ACCENT, '★★') + mark(l.deadline, TEXT, 'deadline')
     + `<path d="${d}" fill="none" stroke="${ACCENT}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`
     + `<circle cx="${(s * W).toFixed(2)}" cy="${yOf(here).toFixed(2)}" r="4.5" fill="${GOLD}" stroke="#0d1433" stroke-width="1.5"/>`
-    + `<text x="2" y="12" fill="${TEXT}" font-size="11" font-family="sans-serif">Delivers about year ${here.toFixed(1)}</text></svg>`;
+    + txt(2, 12, 'start', `Delivers about year ${here.toFixed(1)}`, 11)
+    + txt(0, 96, 'start', 'slower') + txt(W, 96, 'end', 'faster') + '</svg>';
 }
