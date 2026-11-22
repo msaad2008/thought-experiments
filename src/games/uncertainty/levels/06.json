@@ -1,0 +1,44 @@
+{
+  "id": "06",
+  "title": "Scout",
+  "hint": "A light scout. The arrow now shows only 1 second of travel; the shell takes longer.",
+  "insight": "Light objects spread fast. Electrons are so light that this blur shapes how atoms work.",
+  "massTonnes": 850,
+  "flightTime": 1.5,
+  "hitRadius": 88,
+  "width": 1100,
+  "presetsOnly": false,
+  "arrowToImpact": false,
+  "shots": [
+    {
+      "x": 500,
+      "y": 400,
+      "vx": 60,
+      "vy": 30
+    },
+    {
+      "x": 250,
+      "y": 500,
+      "vx": 80,
+      "vy": -60
+    },
+    {
+      "x": 800,
+      "y": 300,
+      "vx": -70,
+      "vy": 40
+    },
+    {
+      "x": 400,
+      "y": 250,
+      "vx": 50,
+      "vy": 80
+    },
+    {
+      "x": 700,
+      "y": 550,
+      "vx": -60,
+      "vy": -50
+    }
+  ]
+}

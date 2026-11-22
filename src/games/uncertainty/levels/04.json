@@ -1,0 +1,44 @@
+{
+  "id": "04",
+  "title": "The dial",
+  "hint": "Now you set the balance yourself. Neither end works here: find the setting in between.",
+  "insight": "The blur at impact is smallest at Δx* = √(ħt/2m): sharp enough that the starting blur is small, loose enough that the speed blur stays small.",
+  "massTonnes": 2000,
+  "flightTime": 2,
+  "hitRadius": 66,
+  "width": 820,
+  "presetsOnly": false,
+  "arrowToImpact": true,
+  "shots": [
+    {
+      "x": 400,
+      "y": 300,
+      "vx": 40,
+      "vy": 20
+    },
+    {
+      "x": 200,
+      "y": 250,
+      "vx": 60,
+      "vy": -30
+    },
+    {
+      "x": 600,
+      "y": 400,
+      "vx": -50,
+      "vy": -40
+    },
+    {
+      "x": 300,
+      "y": 450,
+      "vx": 30,
+      "vy": -60
+    },
+    {
+      "x": 500,
+      "y": 200,
+      "vx": -35,
+      "vy": 50
+    }
+  ]
+}

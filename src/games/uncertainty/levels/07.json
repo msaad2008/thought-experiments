@@ -1,0 +1,44 @@
+{
+  "id": "07",
+  "title": "Far and fast",
+  "hint": "A long flight and a fast ship. Find the balance, then lead it by the whole flight.",
+  "insight": "The best setting grows with the flight time: Δx* = √(ħt/2m). Waiting longer always costs precision.",
+  "massTonnes": 2400,
+  "flightTime": 3,
+  "hitRadius": 74,
+  "width": 920,
+  "presetsOnly": false,
+  "arrowToImpact": false,
+  "shots": [
+    {
+      "x": 200,
+      "y": 300,
+      "vx": 120,
+      "vy": 40
+    },
+    {
+      "x": 700,
+      "y": 500,
+      "vx": -130,
+      "vy": -60
+    },
+    {
+      "x": 400,
+      "y": 600,
+      "vx": 90,
+      "vy": -100
+    },
+    {
+      "x": 150,
+      "y": 200,
+      "vx": 100,
+      "vy": 60
+    },
+    {
+      "x": 800,
+      "y": 250,
+      "vx": -120,
+      "vy": 70
+    }
+  ]
+}
