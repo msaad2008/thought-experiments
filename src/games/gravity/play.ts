@@ -116,6 +116,7 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
   const resetBtn = el('button', 'btn-ghost', 'Reset');
   resetBtn.type = 'button';
   // One slot, three jobs: Speed while flying, Solution (classroom, empty sky), otherwise Reset.
+  let solutionAt = -Infinity; // a quick second tap must not wipe the solution just placed
   resetBtn.addEventListener('click', () => {
     if (drag || finished) return;
     if (sim) {
@@ -125,10 +126,12 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
     } else if (ctx.classroom && placed.length === 0) {
       placed = level.solution.map((b) => ({ ...b }));
       selected = -1;
+      solutionAt = performance.now();
       changed();
       showToast('Solution placed. Press Launch to watch it.');
       say('Solution placed. Press Launch to watch it.');
     } else {
+      if (performance.now() - solutionAt < 800) return;
       placed = [];
       selected = -1;
       changed();
@@ -175,12 +178,13 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
       btn.disabled = n === 0 || !!sim || finished;
       btn.setAttribute('aria-label', `${BODY_TYPES[t].name}, ${n} left`);
     }
-    launchBtn.textContent = sim ? 'Stop' : 'Launch';
-    launchBtn.className = sim ? 'btn-ghost' : 'cta';
+    const flying = !!sim && !finished; // during the short pause after a win the buttons read as editing
+    launchBtn.textContent = flying ? 'Stop' : 'Launch';
+    launchBtn.className = flying ? 'btn-ghost' : 'cta';
     launchBtn.disabled = finished;
     const solution = !sim && ctx.classroom && placed.length === 0;
-    resetBtn.textContent = sim ? `Speed ${speedLabel(flightSpeed)}` : solution ? 'Solution' : 'Reset';
-    if (sim) resetBtn.setAttribute('aria-label', `Flight speed ${speedLabel(flightSpeed)}. Press to change.`);
+    resetBtn.textContent = flying ? `Speed ${speedLabel(flightSpeed)}` : solution ? 'Solution' : 'Reset';
+    if (flying) resetBtn.setAttribute('aria-label', `Flight speed ${flightSpeed === 0.5 ? 'half' : speedLabel(flightSpeed)}. Press to change.`);
     else resetBtn.removeAttribute('aria-label');
     resetBtn.disabled = finished || (!sim && !solution && placed.length === 0);
     levelsBtn.disabled = finished; // the level end is on its way
@@ -251,13 +255,22 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
     if (removeBtn.hidden !== !show) removeBtn.hidden = !show;
     if (!show) return;
     const b = placed[selected];
-    const r = radius(b.type) * view!.k;
+    const v = view!;
+    const r = radius(b.type) * v.k;
+    const cx = v.ox + b.x * v.k, cy = v.oy + b.y * v.k;
     const w = removeBtn.offsetWidth || 110;
     const h = removeBtn.offsetHeight || 44;
-    const x = Math.min(view!.w - w - 4, Math.max(4, view!.ox + b.x * view!.k + r * 0.7));
-    let y = view!.oy + b.y * view!.k - r * 0.7 - h;
-    if (y < 4) y = view!.oy + b.y * view!.k + r + 6; // no room above: go below
-    const left = `${Math.round(x)}px`, top = `${Math.round(Math.min(view!.h - h - 4, y))}px`;
+    const M = 4, G = 6;
+    // Above-right, above-left, below-right, below-left: the first that fits the sky without covering the body.
+    const spots = [
+      [cx + r * 0.5, cy - r - G - h],
+      [cx - r * 0.5 - w, cy - r - G - h],
+      [cx + r * 0.5, cy + r + G],
+      [cx - r * 0.5 - w, cy + r + G],
+    ].map(([x, y]) => [Math.min(v.w - w - M, Math.max(M, x)), Math.min(v.h - h - M, Math.max(M, y))]);
+    const covers = ([x, y]: number[]) => Math.hypot(cx - Math.max(x, Math.min(cx, x + w)), cy - Math.max(y, Math.min(cy, y + h))) < r + 2;
+    const [x, y] = spots.find((s) => !covers(s)) ?? spots[0];
+    const left = `${Math.round(x)}px`, top = `${Math.round(y)}px`;
     if (removeBtn.style.left !== left) removeBtn.style.left = left;
     if (removeBtn.style.top !== top) removeBtn.style.top = top;
   }
@@ -291,6 +304,7 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
   // ----- flight -----
   function launch(): void {
     if (sim || finished || drag) return;
+    if (document.activeElement === removeBtn) canvas.focus({ preventScroll: true }); // it is about to hide
     hint.hidden = true;
     const input = toSimInput(level, placed);
     simBodies = input.bodies;
@@ -421,12 +435,12 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
       if (d * view!.k <= Math.max(radius(b.type) * view!.k, HIT_MIN_PX) && d < best) [best, hit] = [d, i];
     });
     selected = hit;
-    placeRemove();
     if (hit >= 0) {
       const b = placed[hit];
       drag = { type: b.type, from: hit, pointerId: e.pointerId, sx: e.clientX, sy: e.clientY, moved: false, off: { x: b.x - w.x, y: b.y - w.y }, pos: { x: b.x, y: b.y } };
       canvas.setPointerCapture(e.pointerId);
     }
+    placeRemove(); // hidden while pressed; shown again on release
   }
 
   /**

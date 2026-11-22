@@ -43,7 +43,7 @@ export const PHYSICS_HTML = `
 <h3>The pull</h3>
 <p class="eq">a = GM/r²</p>
 <p>The ship feels every body at once and the pulls add as arrows. Before launch, the thin arrows on the ship show each body's pull and the bold arrow shows the total.</p>
-<p>The flight trail glows brighter and turns gold where the ship moves faster, and dims where it slows. A ship speeds up as it falls toward a body and slows down as it climbs away, because energy is conserved.</p>
+<p>The flight trail turns bright gold where the ship moves faster than at launch, and dims to violet where it moves slower. A ship speeds up as it falls toward a body and slows down as it climbs away: it swaps movement energy for gravitational energy and back, so the total stays the same.</p>
 
 <h3>Size and density</h3>
 <p class="eq">R = (3M/4πρ)^(1/3)</p>

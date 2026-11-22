@@ -41,7 +41,7 @@ function setup(index: number, classroom = false) {
   const canvas = stage.querySelector('canvas')!;
   const count = (i: number) => items[i].querySelector('.gv-count')!.textContent;
   const remove = stage.querySelector<HTMLButtonElement>('.gv-remove')!;
-  return { stage, canvas, items, launch, reset, levelsBtn, levels, count, remove };
+  return { stage, canvas, items, launch, reset, levelsBtn, levels, count, remove, complete };
 }
 
 function ptr(target: Element, type: string, x: number, y: number, pointerType = 'mouse'): void {
@@ -128,7 +128,7 @@ test('While flying, the Reset slot cycles the flight speed', () => {
   const s = setup(0);
   trayDrop(s, 0, 480, 410);
   s.launch.click();
-  expect(s.reset.textContent).toBe('Speed 1×');
+  while (s.reset.textContent !== 'Speed 1×') s.reset.click(); // the speed is kept from earlier flights
   const seen = [1, 2, 3, 4].map(() => (s.reset.click(), s.reset.textContent));
   expect(seen).toEqual(['Speed 2×', 'Speed 4×', 'Speed ½×', 'Speed 1×']);
   s.launch.click(); // Stop
@@ -144,10 +144,15 @@ test('Classroom mode offers the solution on an empty sky; students never see it'
   vi.restoreAllMocks();
 
   const s = setup(1, true);
+  const now = vi.spyOn(performance, 'now').mockReturnValue(1000);
   expect(s.reset.textContent).toBe('Solution');
   s.reset.click();
   expect(s.count(0)).toBe('0'); // level 02's solution uses both moons
   expect(s.reset.textContent).toBe('Reset');
+  now.mockReturnValue(1300);
+  s.reset.click(); // a double tap must not wipe the solution
+  expect(s.count(0)).toBe('0');
+  now.mockReturnValue(2500);
   s.reset.click();
   expect(s.count(0)).toBe('2');
   expect(s.reset.textContent).toBe('Solution');
@@ -164,6 +169,45 @@ test('Selecting a placed body shows ✕ Remove, which sends it back to the tray'
   ptr(s.canvas, 'pointerdown', 50 * K, 900 * K); // tap empty sky: deselect
   ptr(s.canvas, 'pointerup', 50 * K, 900 * K);
   expect(s.remove.hidden).toBe(true);
+});
+
+/** Flies level 01's solution at a playback speed, one 16.7 ms frame at a time (with an occasional long stall). */
+function flyLevel01(speed: string, stall: boolean) {
+  let next = null as FrameRequestCallback | null;
+  vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => ((next = cb), 1));
+  vi.stubGlobal('cancelAnimationFrame', () => {});
+  Object.defineProperty(document, 'hidden', { value: false, configurable: true });
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+  try {
+    const s = setup(0);
+    trayDrop(s, 0, 480, 410); // the reference spot
+    s.launch.click();
+    while (s.reset.textContent !== `Speed ${speed}`) s.reset.click();
+    let t = 0;
+    for (let i = 0; i < 20000 && !s.launch.disabled; i++) {
+      t += stall && i % 40 === 39 ? 500 : 1000 / 60;
+      next?.(t);
+    }
+    vi.advanceTimersByTime(1000); // the short pause before the level end
+    return s.complete.mock.calls;
+  } finally {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+    delete (document as { hidden?: boolean }).hidden;
+    dispose?.();
+    dispose = null;
+    vi.restoreAllMocks();
+    document.body.replaceChildren();
+  }
+}
+
+test('The flight speed changes only the watching: every speed, with or without stalls, gives the same win', () => {
+  const runs = [flyLevel01('1×', false), flyLevel01('4×', false), flyLevel01('½×', false), flyLevel01('4×', true)];
+  for (const calls of runs) {
+    expect(calls).toHaveLength(1);
+    expect(calls[0][0]).toBe(3);
+  }
+  expect(new Set(runs.map((c) => JSON.stringify(c)))).toHaveProperty('size', 1);
 });
 
 test('The Levels button leaves for the level select', () => {
