@@ -30,6 +30,7 @@ export default defineConfig({
         main: 'index.html',
         about: 'about/index.html',
         gravity: 'gravity/index.html',
+        uncertainty: 'uncertainty/index.html',
         notFound: '404.html',
       },
     },

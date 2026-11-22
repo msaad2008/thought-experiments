@@ -10,6 +10,7 @@ The games are being released one at a time.
 
 - **Antidote Run**: special relativity and time dilation, with the Lorentz factor γ = 1/√(1−v²/c²).
 - **Slingshot**: gravity, a = GM/r², with a black-hole finale that uses a general-relativity approximation.
+- **Uncertain Fire**: the uncertainty principle, Δx·Δp ≥ ħ/2, and how a measured position spreads over time.
 - **Entangled Maze**: quantum entanglement. Results are correlated but individually random, and no signal can be sent.
 - **Uncertain Fire**: the Heisenberg uncertainty principle, Δx·Δp ≥ ħ/2.
 - **Collider**: particle collisions, with E = γmc² and the conservation laws.
