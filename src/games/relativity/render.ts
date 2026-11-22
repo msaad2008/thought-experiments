@@ -261,13 +261,23 @@ export function predictorSvg(l: Level, upgrades: ReadonlySet<string>, lever: num
   const label = `Delivery year against your speed setting. Earliest delivery: best about ${bestSpeed.toFixed(2)} c.`;
   const txt = (x: number, y: number, anchor: string, t: string, size = 9) =>
     `<text x="${x}" y="${y.toFixed(2)}" text-anchor="${anchor}" fill="${TEXT}" font-size="${size}" font-family="sans-serif">${t}</text>`;
-  const mark = (year: number, colour: string, name: string) => {
-    const y = yOf(year);
-    return `<line x1="0" y1="${y.toFixed(2)}" x2="${W}" y2="${y.toFixed(2)}" stroke="${colour}" stroke-opacity="0.7" stroke-width="1" stroke-dasharray="4 3"/>`
-      + txt(W - 1, y - 2, 'end', name);
+  // Right-end labels: each near its own line, but at least 10 units apart and inside 10..90.
+  const marks = [[l.marks[1], GOLD, '★★★'], [l.marks[0], ACCENT, '★★'], [l.deadline, TEXT, 'deadline']] as const;
+  const order = marks.map((m, i) => ({ i, y: yOf(m[0]) - 2 })).sort((p, q) => p.y - q.y);
+  order.forEach((o, j) => { if (j) o.y = Math.max(o.y, order[j - 1].y + 10); });
+  for (let j = order.length - 1; j >= 0; j--) {
+    const room = j === order.length - 1 ? 90 : order[j + 1].y - 10;
+    order[j].y = Math.min(order[j].y, room);
+  }
+  const labelY: number[] = [];
+  order.forEach((o) => { labelY[o.i] = o.y; });
+  const mark = (m: typeof marks[number], i: number) => {
+    const y = yOf(m[0]);
+    return `<line x1="0" y1="${y.toFixed(2)}" x2="${W}" y2="${y.toFixed(2)}" stroke="${m[1]}" stroke-opacity="0.7" stroke-width="1" stroke-dasharray="4 3"/>`
+      + txt(W - 1, labelY[i], 'end', m[2]);
   };
   return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${label}" style="overflow:visible">`
-    + mark(l.marks[1], GOLD, '★★★') + mark(l.marks[0], ACCENT, '★★') + mark(l.deadline, TEXT, 'deadline')
+    + marks.map(mark).join('')
     + `<path d="${d}" fill="none" stroke="${ACCENT}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`
     + `<circle cx="${(s * W).toFixed(2)}" cy="${yOf(here).toFixed(2)}" r="4.5" fill="${GOLD}" stroke="#0d1433" stroke-width="1.5"/>`
     + txt(2, 12, 'start', `Delivers about year ${here.toFixed(1)}`, 11)

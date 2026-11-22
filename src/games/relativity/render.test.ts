@@ -94,6 +94,19 @@ describe('relativity render', () => {
     expect(cx(0.2)).not.toBeCloseTo(cx(0.8));
   });
 
+  it('the three line labels never overlap and stay inside the viewBox', () => {
+    for (const l of LEVELS) for (const up of [NONE, new Set(['couch', 'incubator'])]) {
+      const svg = predictorSvg(l, up, 0.5);
+      const H = Number(svg.match(/viewBox="0 0 \d+ (\d+)"/)![1]);
+      const ys = [...svg.matchAll(/<text x="199" y="([\d.]+)"/g)].map((m) => Number(m[1])).sort((a, b) => a - b);
+      expect(ys, l.id).toHaveLength(3);
+      expect(ys[1] - ys[0], l.id).toBeGreaterThanOrEqual(10 - 1e-6);
+      expect(ys[2] - ys[1], l.id).toBeGreaterThanOrEqual(10 - 1e-6);
+      expect(ys[0]).toBeGreaterThan(0);
+      expect(ys[2]).toBeLessThan(H);
+    }
+  });
+
   it('the predictor is labelled', () => {
     const svg = predictorSvg(LEVELS[1], NONE, 0.5);
     for (const w of ['slower', 'faster', 'deadline', '★★★']) expect(svg).toContain(w);
