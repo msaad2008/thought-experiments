@@ -680,12 +680,12 @@ button.cta:disabled {
 }
 
 /* Three buttons on one row on a 360 px phone. */
-.gv-panel:has(.uc-shots) .gv-actions {
+.uc-panel .gv-actions {
   flex-wrap: nowrap;
   gap: 8px;
 }
 
-.gv-panel:has(.uc-shots) .gv-actions > button {
+.uc-panel .gv-actions > button {
   padding-inline: 10px;
   white-space: nowrap;
 }

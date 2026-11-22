@@ -186,7 +186,7 @@ test('While a placed body is selected the slot is a red Remove, which sends it b
 });
 
 /** Flies level 01's solution at a playback speed, one 16.7 ms frame at a time (with an occasional long stall). */
-function flyLevel01(speed: string, stall: boolean, pausedFrames = 0) {
+function flyLevel01(speed: string, stall: boolean, pausedFrames = 0, pauseAtEnd = false) {
   let next = null as FrameRequestCallback | null;
   vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => ((next = cb), 1));
   vi.stubGlobal('cancelAnimationFrame', () => {});
@@ -206,6 +206,12 @@ function flyLevel01(speed: string, stall: boolean, pausedFrames = 0) {
       t += stall && i % 40 === 39 ? 500 : 1000 / 60;
       next?.(t);
     }
+    if (pauseAtEnd) {
+      pausedNow = true;
+      vi.advanceTimersByTime(5000);
+      expect(s.complete).not.toHaveBeenCalled(); // the level end waits behind the Physics panel
+      pausedNow = false;
+    }
     vi.advanceTimersByTime(1000); // the short pause before the level end
     return s.complete.mock.calls;
   } finally {
@@ -221,7 +227,7 @@ function flyLevel01(speed: string, stall: boolean, pausedFrames = 0) {
 
 test('The flight speed changes only the watching: every speed, with or without stalls, gives the same win', () => {
   // The last run also sits behind the Physics panel for a minute first.
-  const runs = [flyLevel01('1×', false), flyLevel01('4×', false), flyLevel01('½×', false), flyLevel01('4×', true), flyLevel01('1×', false, 3600)];
+  const runs = [flyLevel01('1×', false), flyLevel01('4×', false), flyLevel01('½×', false), flyLevel01('4×', true), flyLevel01('1×', false, 3600), flyLevel01('1×', false, 0, true)];
   for (const calls of runs) {
     expect(calls).toHaveLength(1);
     expect(calls[0][0]).toBe(3);

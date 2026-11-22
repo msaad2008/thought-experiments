@@ -287,6 +287,9 @@ test('five hits give 3 stars; three give 1; two give a Try again', () => {
   expect(s.hint.textContent).toBe('2 of 5 hits. You need 3.');
   expect(s.dots()).toEqual(['uc-dot miss', 'uc-dot hit', 'uc-dot miss', 'uc-dot hit', 'uc-dot miss']);
   expect(s.primary.textContent).toBe('Try again');
+  const over = look(); // the failing last shot stays on show, like any other result
+  expect(over.found).not.toBeNull();
+  expect(over.shotMarks).toHaveLength(4);
   vi.advanceTimersByTime(5000);
   expect(s.complete).not.toHaveBeenCalled();
   s.primary.click();
@@ -309,6 +312,28 @@ test('a result waits, then the next shot comes by itself', () => {
   const sc = look();
   expect(sc.reading).toEqual(LEVELS[0].shots[1]);
   expect(sc.shotMarks).toEqual([{ at: s.centre(0), hit: false }]);
+});
+
+test('a result and the level end wait while the Physics panel is open', () => {
+  let s = setup(0, { rng: () => 0 });
+  s.radios[0].click();
+  playShot(s, away(s, s.centre(0)));
+  pausedNow = true;
+  vi.advanceTimersByTime(5000);
+  expect(s.primary.textContent).toBe('Next shot');
+  pausedNow = false;
+  vi.advanceTimersByTime(200);
+  expect(s.primary.textContent).toBe('Measure');
+  fresh();
+
+  s = setup(0, { rng: () => 0 });
+  attempt(s, []);
+  pausedNow = true;
+  vi.advanceTimersByTime(5000);
+  expect(s.complete).not.toHaveBeenCalled();
+  pausedNow = false;
+  vi.advanceTimersByTime(200);
+  expect(s.complete).toHaveBeenCalledTimes(1);
 });
 
 test('double Fire fires once, and buttons do nothing mid-flight', () => {
