@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { LEVELS, bestLever, course } from './levels';
-import { AT_REST, aberrate, doppler, leverToEta, seenColonyYear, type Ship } from './physics';
-import { STARS, drawScene, fitView, predictorCurve, predictorSvg, projectStar, type Phase, type Scene } from './render';
+import { LEVELS, bestLever, course, deliveryFor, ripenTime } from './levels';
+import { AT_REST, aberrate, advance, deliveryYear, doppler, leverToEta, seenColonyYear, type Ship } from './physics';
+import { STARS, drawScene, fitView, liveCurve, predictorCurve, predictorSvg, projectStar, type Phase, type Scene } from './render';
 
 const NONE: ReadonlySet<string> = new Set();
 
@@ -86,50 +86,79 @@ describe('relativity render', () => {
     expect(pulses({ ...base, phase: 'brief', ship: AT_REST, colonyYearSeen: -D })).toEqual([]);
   });
 
+  const svgFor = (l: (typeof LEVELS)[number], lever: number, up: ReadonlySet<string> = NONE) =>
+    predictorSvg(l, predictorCurve(l, up), lever, deliveryFor(l, up, lever));
+  /** The marker's centre: the zero-length round-capped stroke. */
+  const marker = (svg: string) => svg.match(/<path d="M([-\d.]+) ([-\d.]+)h0\.01"/)!.slice(1).map(Number);
+
   it('the predictor curve is cached, and a new lever only moves the marker', () => {
     const l = LEVELS[1];
     expect(predictorCurve(l, NONE)).toBe(predictorCurve(l, new Set()));
     expect(predictorCurve(l, new Set(['couch']))).not.toBe(predictorCurve(l, NONE));
-    const cx = (lev: number) => Number(predictorSvg(l, NONE, lev).match(/<circle[^>]* cx="([-\d.]+)"/)![1]);
-    expect(cx(0.2)).not.toBeCloseTo(cx(0.8));
+    expect(marker(svgFor(l, 0.2))[0]).not.toBeCloseTo(marker(svgFor(l, 0.8))[0]);
+    const curve = (svg: string) => svg.match(/<path d="(M0\.00[^"]+)"/)![1];
+    expect(curve(svgFor(l, 0.2))).toBe(curve(svgFor(l, 0.8)));
   });
 
-  it('the three line labels never overlap and stay inside the viewBox', () => {
+  it('the predictor stretches to its box, keeps its lines and dot round, and leaves the words to the page', () => {
     for (const l of LEVELS) for (const up of [NONE, new Set(['couch', 'incubator'])]) {
-      const svg = predictorSvg(l, up, 0.5);
-      const H = Number(svg.match(/viewBox="0 0 \d+ (\d+)"/)![1]);
-      const ys = [...svg.matchAll(/<text x="199" y="([\d.]+)"/g)].map((m) => Number(m[1])).sort((a, b) => a - b);
-      expect(ys, l.id).toHaveLength(3);
-      expect(ys[1] - ys[0], l.id).toBeGreaterThanOrEqual(10 - 1e-6);
-      expect(ys[2] - ys[1], l.id).toBeGreaterThanOrEqual(10 - 1e-6);
-      expect(ys[0]).toBeGreaterThan(0);
-      expect(ys[2]).toBeLessThan(H);
+      const svg = svgFor(l, 0.5, up);
+      expect(svg, l.id).toContain('preserveAspectRatio="none"');
+      expect(svg, l.id).not.toContain('<text');
+      const strokes = svg.match(/<(path|line) [^>]*>/g)!;
+      expect(strokes).toHaveLength(6); // three marks, the curve, the dot and its outline
+      for (const s of strokes) expect(s).toContain('vector-effect="non-scaling-stroke"');
+      expect((svg.match(/stroke-dasharray/g) ?? []).length).toBe(3);
+      const [, y] = marker(svg);
+      expect(y).toBeGreaterThanOrEqual(0);
+      expect(y).toBeLessThanOrEqual(100);
     }
   });
 
-  it('the predictor is labelled', () => {
-    const svg = predictorSvg(LEVELS[1], NONE, 0.5);
-    for (const w of ['slower', 'faster', 'deadline', '★★★']) expect(svg).toContain(w);
+  it('the predictor is labelled with the year it predicts and the best speed', () => {
+    const l = LEVELS[1];
+    const svg = predictorSvg(l, predictorCurve(l, NONE), 0.5, 13.4812);
+    expect(svg).toContain('role="img"');
+    expect(svg).toContain('aria-label="Delivery year against your speed setting. Delivers about year 13.48. Earliest delivery: best about 0.84 c."');
   });
 
   it('the predictor dips at the best lever', () => {
     for (const level of [LEVELS[1], LEVELS[0]]) {
       const best = bestLever(level, NONE);
-      const svg = predictorSvg(level, NONE, 0.5);
-      expect(svg).toContain('role="img"');
-      expect(svg).toMatch(/aria-label="[^"]*best about \d\.\d\d c/);
-      expect(svg).toContain('Delivers about year ');
-      const vb = svg.match(/viewBox="0 0 (\d+) (\d+)"/)!;
-      const W = Number(vb[1]);
-      const d = svg.match(/<path[^>]* d="([^"]+)"/)![1];
+      const svg = svgFor(level, 0.5);
+      const W = Number(svg.match(/viewBox="0 0 (\d+) (\d+)"/)![1]);
+      const d = svg.match(/<path d="(M0\.00[^"]+)"/)![1];
       const pts = [...d.matchAll(/(-?[\d.]+)[ ,](-?[\d.]+)/g)].map((q) => [Number(q[1]), Number(q[2])]);
       expect(pts.length).toBeGreaterThanOrEqual(60);
       const low = pts.reduce((a, b) => (b[1] > a[1] ? b : a)); // y grows down: earliest delivery = largest y
       expect(Math.abs(low[0] / W - best)).toBeLessThan(0.02);
-      const cx = Number(svg.match(/<circle[^>]* cx="([-\d.]+)"/)![1]);
-      expect(cx / W).toBeCloseTo(0.5, 2);
-      expect((svg.match(/stroke-dasharray/g) ?? []).length).toBe(3);
+      expect(marker(svg)[0] / W).toBeCloseTo(0.5, 2);
     }
-    expect(predictorSvg(LEVELS[1], NONE, 0.5)).toContain('best about 0.84 c');
+  });
+
+  it('the live curve flies each setting from the ship as it is, with the current ripening time', () => {
+    const l = LEVELS[4], c = course(l, NONE);
+    const fromRest = liveCurve(l, c, AT_REST, ripenTime(l, NONE));
+    predictorCurve(l, NONE).vals.forEach((v, i) => expect(fromRest.vals[i]).toBeCloseTo(v, 9));
+    const ship = advance(AT_REST, c, leverToEta(0.7, l.leverMax), 2); // two ship years out
+    const live = liveCurve(l, c, ship, 7);
+    expect(live.vals).toHaveLength(101);
+    for (const i of [0, 37, 100]) {
+      expect(live.vals[i]).toBeCloseTo(deliveryYear(advance(ship, c, leverToEta(i / 100, l.leverMax), Infinity), 7), 9);
+    }
+    const docked = advance(ship, c, 1, Infinity);
+    const still = liveCurve(l, c, docked, 7); // at the colony every setting delivers the same year
+    expect(new Set(still.vals.map((v) => v.toFixed(9))).size).toBe(1);
+    expect(still.bestSpeed).toBeNull();
+    expect(predictorSvg(l, still, 0.3, still.vals[0])).not.toContain('best about');
+  });
+
+  it('the route labels are at least 10 px on a 212 px sky', () => {
+    const { g, calls } = fakeContext();
+    const l = LEVELS[0];
+    drawScene(g, fitView(212, 212, 1), { level: l, ship: AT_REST, course: course(l, NONE), heading: 1, colonyYearSeen: -l.distance, time: 0, reducedMotion: true, phase: 'brief' });
+    const fonts = calls.filter(([k]) => k === 'font').map(([, a]) => parseFloat(String(a[0])));
+    expect(fonts.length).toBeGreaterThan(0);
+    for (const f of fonts) expect((f * 212) / 100).toBeGreaterThanOrEqual(10);
   });
 });

@@ -76,5 +76,18 @@ export function bestLever(l: Level, upgrades: ReadonlySet<string>): number {
   return best;
 }
 
-/** Ship years that pass per real second of flight. */
-export const shipYearsPerSecond = (l: Level): number => l.ripen / TRIP_SECONDS;
+const paceCache = new Map<string, number>();
+/**
+ * Ship years that pass per real second of flight: the best trip (no upgrades) plays in TRIP_SECONDS,
+ * counting its flight or its ripening time, whichever is longer. Computed once per level.
+ */
+export function shipYearsPerSecond(l: Level): number {
+  let v = paceCache.get(l.id);
+  if (v === undefined) {
+    const none: ReadonlySet<string> = new Set();
+    const best = advance(AT_REST, course(l, none), leverToEta(bestLever(l, none), l.leverMax), Infinity);
+    v = Math.max(l.ripen, best.tau) / TRIP_SECONDS;
+    paceCache.set(l.id, v);
+  }
+  return v;
+}

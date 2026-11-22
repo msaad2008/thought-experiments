@@ -16,7 +16,7 @@
   "messages": [
     {
       "at": 1.0,
-      "text": "The strain has changed. The culture now needs 7 years to ripen.",
+      "text": "The strain has changed: the culture now needs 7 years.",
       "ripen": 7
     }
   ],

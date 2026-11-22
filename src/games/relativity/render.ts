@@ -5,7 +5,7 @@ import {
   bestLever, deliveryFor, type Level,
 } from './levels';
 import {
-  aberrate, brakePoint, doppler, leverToEta, starColour,
+  aberrate, advance, brakePoint, deliveryYear, doppler, leverToEta, starColour,
   type Course, type Ship,
 } from './physics';
 
@@ -185,7 +185,7 @@ function routeStrip(g: CanvasRenderingContext2D, s: Scene): void {
   glow(g, CXR + 8, RY - 6, 8, '255,210,94', 0.6);
   disc(g, CXR + 8, RY - 6, 2, GOLD);
   planet(g, CXR, RY, 4, '#d6744a', '#f0a868');
-  g.fillStyle = TEXT; g.font = '4px sans-serif'; g.textBaseline = 'alphabetic';
+  g.fillStyle = TEXT; g.font = '5px sans-serif'; g.textBaseline = 'alphabetic';
   g.textAlign = 'left'; g.fillText('Earth', 3, 97);
   g.textAlign = 'right'; g.fillText(s.level.star, 97, 97);
 
@@ -231,55 +231,71 @@ export function drawScene(g: CanvasRenderingContext2D, v: View, s: Scene): void 
   g.restore();
 }
 
-interface Curve { vals: number[]; best: number; bestSpeed: number; lo: number; hi: number }
+/** A predictor curve: the delivery year for each of 101 lever settings, and the year range it is drawn over. */
+export interface Curve {
+  vals: number[];
+  lo: number;
+  hi: number;
+  /** The speed of the earliest delivery, or null when every setting delivers the same year (at the colony). */
+  bestSpeed: number | null;
+}
 const curves = new Map<string, Curve>();
 const N_PTS = 100;
 
-/** The expensive part of the predictor (101 flights plus the best-lever scan), cached per level and upgrade set. */
+function shape(l: Level, vals: number[], bestSpeed: number | null): Curve {
+  const lo = Math.min(...vals, l.marks[1]) - 0.3;
+  const hi = Math.max(lo + 1, Math.min(Math.max(...vals), l.deadline + 4));
+  return { vals, lo, hi, bestSpeed };
+}
+
+/** Before launch: from rest, with the ripening time known at launch. Cached per level and upgrade set. */
 export function predictorCurve(l: Level, upgrades: ReadonlySet<string>): Curve {
   const key = `${l.id}|${[...upgrades].sort().join(',')}`;
   let c = curves.get(key);
   if (!c) {
     const vals = Array.from({ length: N_PTS + 1 }, (_, i) => deliveryFor(l, upgrades, i / N_PTS));
-    const lo = Math.min(...vals, l.marks[1]) - 0.3;
-    const hi = Math.max(lo + 1, Math.min(Math.max(...vals), l.deadline + 4));
-    const best = bestLever(l, upgrades);
-    c = { vals, best, bestSpeed: Math.tanh(leverToEta(best, l.leverMax)), lo, hi };
+    c = shape(l, vals, Math.tanh(leverToEta(bestLever(l, upgrades), l.leverMax)));
     curves.set(key, c);
   }
   return c;
 }
 
-/** Delivery year against the lever setting for the whole lever, with the three marks and a marker at `lever`. */
-export function predictorSvg(l: Level, upgrades: ReadonlySet<string>, lever: number): string {
-  const W = 200, H = 100, top = 22, bot = 82;
-  const { vals, bestSpeed, lo, hi } = predictorCurve(l, upgrades);
-  const yOf = (year: number) => bot - (clamp(year, lo, hi) - lo) / (hi - lo) * (bot - top);
+/**
+ * After launch: each setting held from the ship's current state (its t and τ carry on), with the
+ * current ripening time. 101 exact flights: the caller recomputes it a few times a second, not every frame.
+ */
+export function liveCurve(l: Level, c: Course, ship: Ship, ripen: number): Curve {
+  const vals = Array.from({ length: N_PTS + 1 }, (_, i) =>
+    deliveryYear(advance(ship, c, leverToEta(i / N_PTS, l.leverMax), Infinity), ripen));
+  const min = Math.min(...vals), max = Math.max(...vals);
+  const at = vals.findIndex((v) => v <= min + 1e-9);
+  return shape(l, vals, max - min > 1e-6 ? Math.tanh(leverToEta(at / N_PTS, l.leverMax)) : null);
+}
+
+/**
+ * Delivery year against the lever setting for the whole lever, the three marks, and a marker at `lever`
+ * (which delivers in year `here`). It stretches to fill its box (preserveAspectRatio none) while the lines
+ * and the marker keep their size on screen; its words (caption, marks, slower/faster) are page text.
+ */
+export function predictorSvg(l: Level, curve: Curve, lever: number, here: number): string {
+  const W = 400, H = 100, top = 10, bot = 90;
+  const { vals, lo, hi, bestSpeed } = curve;
+  const yOf = (year: number) => bot - (clamp(fin(year, hi), lo, hi) - lo) / (hi - lo) * (bot - top);
   const d = vals.map((y, i) => `${i ? 'L' : 'M'}${((i / N_PTS) * W).toFixed(2)} ${yOf(y).toFixed(2)}`).join(' ');
   const s = clamp(fin(lever), 0, 1);
-  const here = deliveryFor(l, upgrades, s);
-  const label = `Delivery year against your speed setting. Earliest delivery: best about ${bestSpeed.toFixed(2)} c.`;
-  const txt = (x: number, y: number, anchor: string, t: string, size = 9) =>
-    `<text x="${x}" y="${y.toFixed(2)}" text-anchor="${anchor}" fill="${TEXT}" font-size="${size}" font-family="sans-serif">${t}</text>`;
-  // Right-end labels: each near its own line, but at least 10 units apart and inside 10..90.
-  const marks = [[l.marks[1], GOLD, '★★★'], [l.marks[0], ACCENT, '★★'], [l.deadline, TEXT, 'deadline']] as const;
-  const order = marks.map((m, i) => ({ i, y: yOf(m[0]) - 2 })).sort((p, q) => p.y - q.y);
-  order.forEach((o, j) => { if (j) o.y = Math.max(o.y, order[j - 1].y + 10); });
-  for (let j = order.length - 1; j >= 0; j--) {
-    const room = j === order.length - 1 ? 90 : order[j + 1].y - 10;
-    order[j].y = Math.min(order[j].y, room);
-  }
-  const labelY: number[] = [];
-  order.forEach((o) => { labelY[o.i] = o.y; });
-  const mark = (m: typeof marks[number], i: number) => {
-    const y = yOf(m[0]);
-    return `<line x1="0" y1="${y.toFixed(2)}" x2="${W}" y2="${y.toFixed(2)}" stroke="${m[1]}" stroke-opacity="0.7" stroke-width="1" stroke-dasharray="4 3"/>`
-      + txt(W - 1, labelY[i], 'end', m[2]);
+  const label = `Delivery year against your speed setting. Delivers about year ${fin(here).toFixed(2)}.`
+    + (bestSpeed === null ? '' : ` Earliest delivery: best about ${bestSpeed.toFixed(2)} c.`);
+  const ns = 'vector-effect="non-scaling-stroke"';
+  const marks = [[l.marks[1], GOLD, '6 4'], [l.marks[0], ACCENT, '6 4'], [l.deadline, TEXT, '2 3']] as const;
+  const line = ([year, colour, dash]: typeof marks[number]) => {
+    const y = yOf(year).toFixed(2);
+    return `<line x1="0" y1="${y}" x2="${W}" y2="${y}" stroke="${colour}" stroke-opacity="0.8" stroke-width="1.5" stroke-dasharray="${dash}" ${ns}/>`;
   };
-  return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${label}" style="overflow:visible">`
-    + marks.map(mark).join('')
-    + `<path d="${d}" fill="none" stroke="${ACCENT}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`
-    + `<circle cx="${(s * W).toFixed(2)}" cy="${yOf(here).toFixed(2)}" r="4.5" fill="${GOLD}" stroke="#0d1433" stroke-width="1.5"/>`
-    + txt(2, 12, 'start', `Delivers about year ${here.toFixed(1)}`, 11)
-    + txt(0, 96, 'start', 'slower') + txt(W, 96, 'end', 'faster') + '</svg>';
+  // A zero-length round-capped stroke is a dot that stays round however the box stretches.
+  const dot = (colour: string, w: number) =>
+    `<path d="M${(s * W).toFixed(2)} ${yOf(here).toFixed(2)}h0.01" stroke="${colour}" stroke-width="${w}" stroke-linecap="round" ${ns}/>`;
+  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${label}" style="overflow:visible">`
+    + marks.map(line).join('')
+    + `<path d="${d}" fill="none" stroke="${ACCENT}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" ${ns}/>`
+    + dot('#0d1433', 13) + dot(GOLD, 9) + '</svg>';
 }

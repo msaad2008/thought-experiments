@@ -3,10 +3,13 @@
 import { test, expect, beforeEach, afterEach, vi } from 'vitest';
 
 vi.mock('../../game-ui/fit', () => ({ fitSky: vi.fn() }));
-vi.mock('./render', async (importOriginal) => ({ ...(await importOriginal<typeof import('./render')>()), drawScene: vi.fn() }));
+vi.mock('./render', async (importOriginal) => {
+  const real = await importOriginal<typeof import('./render')>();
+  return { ...real, drawScene: vi.fn(), liveCurve: vi.fn(real.liveCurve) };
+});
 
 import { fitSky } from '../../game-ui/fit';
-import { drawScene, predictorSvg, type Scene } from './render';
+import { drawScene, liveCurve, predictorCurve, predictorSvg, type Scene } from './render';
 import { startLevel } from './play';
 import { LEVELS, bestLever, course, deliveryFor, ripenTime } from './levels';
 import { AT_REST, START_BETA, advance, deliveryYear, etaToLever, leverToEta } from './physics';
@@ -158,11 +161,11 @@ const LIVE = { hint: false, trip: false, marks: true, clocks: true, speed: true,
 
 test('the brief shows the trip, the marks and the lever at 0.5c', () => {
   const s = setup(L02);
-  const brief = [...s.stage.querySelectorAll('.ar-brief p')].map((p) => p.textContent);
-  expect(brief).toEqual([
-    'Epsilon Eridani · 10.5 light-years · crew limit 1 g · culture needs 8.0 yr of ship time',
-    'Deadline year 15.6 · ★★ by 14.6 · ★★★ by 13.7',
-  ]);
+  expect(s.text('.ar-trip')).toBe('Epsilon Eridani · 10.5 light-years · crew limit 1 g · culture needs 8.0 yr of ship time');
+  expect(s.stage.querySelector('.ar-marks')!.parentElement!.className).toBe('ar-brief');
+  expect(s.text('.ar-marks [aria-hidden="true"]')).toBe('Deadline 15.6 · ★★ 14.6 · ★★★ 13.7');
+  expect(s.text('.ar-marks .sr-only')).toBe('Deadline year 15.6. Two stars by 14.6. Three stars by 13.7.');
+  expect(s.text('.ar-lever-value')).toBe('0.50 c · γ 1.15');
   expect(s.hint.textContent).toBe(s.level.hint);
   expect(s.hint.hidden).toBe(false);
   // Phones: before launch the clocks, speed and news (all zero) make way for the trip and the hint.
@@ -221,7 +224,7 @@ test('launch, fly, dock and deliver: level 02 at its best lever gives 3 stars', 
   expect(frames).toBeGreaterThan(1800); // about 35 s of flight, plus any ripening
   expect(frames).toBeLessThan(2400);
   const e = expected(L02, best);
-  expect(s.status()).toBe(`Delivered in year ${e.year.toFixed(1)}.`);
+  expect(s.status()).toBe(`Delivered in year ${e.year.toFixed(2)}.`);
   expect(s.toast.textContent).toBe(s.status());
   expect(log).toContain('Braking for the colony.');
   expect(log.indexOf('Braking for the colony.')).toBeGreaterThan(log.indexOf('Launched.'));
@@ -231,7 +234,7 @@ test('launch, fly, dock and deliver: level 02 at its best lever gives 3 stars', 
   expect(s.complete).not.toHaveBeenCalled();
   vi.advanceTimersByTime(1);
   expect(s.complete).toHaveBeenCalledTimes(1);
-  expect(s.complete).toHaveBeenCalledWith(3, `${s.level.insight} Colony clocks: ${e.year.toFixed(1)} years. Yours: ${e.tau.toFixed(1)}.`);
+  expect(s.complete).toHaveBeenCalledWith(3, `${s.level.insight} Colony clocks: ${e.year.toFixed(2)} years. Yours: ${e.tau.toFixed(1)}.`);
   const sc = look();
   expect(sc.phase).toBe('done');
   expect(sc.ship.x).toBe(s.level.distance);
@@ -306,7 +309,7 @@ test('arriving unripe waits, then delivers', () => {
   expect(look().phase).toBe('ripening');
   const frames = until(delivered(s));
   expect(frames).toBeLessThanOrEqual(3 * 60 + 2); // a ripening wait plays in at most 3 s
-  expect(s.status()).toBe(`Delivered in year ${deliveryFor(s.level, NONE, 1).toFixed(1)}.`);
+  expect(s.status()).toBe(`Delivered in year ${deliveryFor(s.level, NONE, 1).toFixed(2)}.`);
   expect(s.text('.ar-culture')).toBe('Culture 100% of 8.0 yr');
   vi.advanceTimersByTime(1200);
   expect(s.complete).toHaveBeenCalledWith(1, expect.stringContaining('Colony clocks:'));
@@ -326,7 +329,7 @@ test('too slow ends as Too late, with Try again', () => {
   expect(shown(s)).toEqual(LIVE); // the panel keeps its flight shape
   expect(document.activeElement).toBe(s.primary); // Try again
   const year = parseFloat(s.clocks()[1].slice(5));
-  expect(year).toBeGreaterThan(28.7);
+  expect(year).toBeGreaterThanOrEqual(28.7); // shown to 2 decimals: just past 28.70 reads 28.70
   expect(year).toBeLessThan(28.9);
   expect(s.primary.disabled).toBe(false);
   expect(s.lever.disabled).toBe(true);
@@ -426,7 +429,7 @@ test('the lever works mid-flight', () => {
 });
 
 test('level 05: the news arrives late and changes the culture', () => {
-  const msg = 'Colony, sent year 1: The strain has changed. The culture now needs 7 years to ripen.';
+  const msg = 'Colony, sent year 1: The strain has changed: the culture now needs 7 years.';
   let s = setup(L05, { classroom: true });
   click(s.middle); // Solution: the best for what is known at launch
   const best = bestLever(s.level, NONE);
@@ -438,14 +441,14 @@ test('level 05: the news arrives late and changes the culture', () => {
   expect(frames).toBeGreaterThan(300); // its light takes years to catch up
   expect(s.text('.ar-news')).toBe(msg);
   expect(s.text('.ar-culture')).toMatch(/ of 7\.0 yr$/);
-  expect(s.text('.ar-brief p')).toContain('culture needs 7.0 yr of ship time');
+  expect(s.text('.ar-trip')).toContain('culture needs 7.0 yr of ship time');
   step(300);
   expect(s.text('.ar-news')).toBe(msg); // the message stays on show
   until(delivered(s));
   const e = expected(L05, best, NONE, 7);
-  expect(s.status()).toBe(`Delivered in year ${e.year.toFixed(1)}.`);
+  expect(s.status()).toBe(`Delivered in year ${e.year.toFixed(2)}.`);
   vi.advanceTimersByTime(1200);
-  expect(s.complete).toHaveBeenCalledWith(2, expect.stringContaining(`Colony clocks: ${e.year.toFixed(1)} years.`));
+  expect(s.complete).toHaveBeenCalledWith(2, expect.stringContaining(`Colony clocks: ${e.year.toFixed(2)} years.`));
   expect(log.filter((l) => l === msg)).toHaveLength(1);
   fresh();
 
@@ -457,13 +460,14 @@ test('level 05: the news arrives late and changes the culture', () => {
 });
 
 test('a round trip flies home and compares twins', () => {
-  const s = setup(L07, { classroom: true });
+  const s = setup(L07, { classroom: true, upgrades: ['predictor'] });
+  expect(s.stage.querySelector<HTMLElement>('.ar-predictor')!.hidden).toBe(false);
   click(s.middle);
   const best = bestLever(s.level, NONE);
   click(s.primary);
   until(delivered(s));
   const e = expected(L07, best);
-  expect(s.status()).toBe(`Delivered in year ${e.year.toFixed(1)}.`);
+  expect(s.status()).toBe(`Delivered in year ${e.year.toFixed(2)}.`);
   let sc = look();
   expect(sc.phase).toBe('return');
   expect(sc.heading).toBe(-1);
@@ -471,12 +475,14 @@ test('a round trip flies home and compares twins', () => {
   expect(sc.ship.x).toBeLessThan(0.1);
   expect(s.lever.disabled).toBe(false);
   expect(s.middle.textContent).toBe('Speed 1×');
+  expect(s.levelsBtn.disabled).toBe(true); // delivered: leaving now would lose the stars
+  expect(s.stage.querySelector<HTMLElement>('.ar-predictor')!.hidden).toBe(true); // the delivery is done
   const frames = until(() => s.status().startsWith('Home'));
   expect(frames).toBeGreaterThan(5 * 60 - 5); // the trip home plays in 5 s
   expect(frames).toBeLessThan(5 * 60 + 5);
   const home = advance(AT_REST, course(s.level, NONE), leverToEta(best, s.level.leverMax), Infinity);
   const A = e.year + home.t, B = e.tau + home.tau;
-  expect(s.status()).toBe(`Home in year ${A.toFixed(1)}.`);
+  expect(s.status()).toBe(`Home in year ${A.toFixed(2)}.`);
   expect(s.clocks()).toEqual([`${B.toFixed(2)} yr`, `year ${A.toFixed(2)}`]);
   sc = look();
   expect(sc.phase).toBe('done');
@@ -577,24 +583,98 @@ test('Retry with this setup keeps the launch lever', () => {
   expect(s.lever.value).toBe(START(L03));
 });
 
-test('the Arrival predictor shows only when owned', () => {
+/** The same SVG, parsed the way the page parses it (the serializer writes empty tags in full). */
+const parsed = (svg: string) => {
+  const d = document.createElement('div');
+  d.innerHTML = svg;
+  return d.innerHTML;
+};
+/** The year the predictor's caption shows. */
+const said = (s: S) => parseFloat(s.text('.ar-pred-caption').replace('Delivers about year ', ''));
+const deliveredYear = (s: S) => parseFloat(s.status().replace('Delivered in year ', ''));
+
+test('the Arrival predictor shows only when owned, with its words as page text', () => {
   let s = setup(L02);
   expect(s.stage.querySelector('.ar-predictor')).toBeNull();
   fresh();
   const ups = new Set(['predictor']);
   s = setup(L02, { upgrades: ['predictor'] });
-  const box = s.stage.querySelector('.ar-predictor')!;
-  /** The same SVG, parsed the way the page parses it (the serializer writes empty tags in full). */
-  const parsed = (svg: string) => {
-    const d = document.createElement('div');
-    d.innerHTML = svg;
-    return d.innerHTML;
-  };
-  expect(box.querySelector('svg')).not.toBeNull();
-  expect(box.innerHTML).toBe(parsed(predictorSvg(s.level, ups, Number(START(L02)) / 1000)));
+  const graph = s.stage.querySelector('.ar-pred-graph')!;
+  const start = Number(START(L02)) / 1000;
+  expect(graph.innerHTML).toBe(parsed(predictorSvg(s.level, predictorCurve(s.level, ups), start, deliveryFor(s.level, ups, start))));
   setLever(s, 700);
-  expect(box.innerHTML).toBe(parsed(predictorSvg(s.level, ups, 0.7)));
-  expect(box.textContent).toContain(`Delivers about year ${deliveryFor(s.level, ups, 0.7).toFixed(1)}`);
+  const year = deliveryFor(s.level, ups, 0.7).toFixed(2);
+  expect(graph.innerHTML).toBe(parsed(predictorSvg(s.level, predictorCurve(s.level, ups), 0.7, deliveryFor(s.level, ups, 0.7))));
+  expect(s.text('.ar-pred-caption')).toBe(`Delivers about year ${year}`);
+  expect(graph.querySelector('svg')!.getAttribute('role')).toBe('img');
+  expect(graph.querySelector('svg')!.getAttribute('aria-label')).toContain(`Delivers about year ${year}.`);
+  expect(graph.querySelector('text')).toBeNull(); // the words are page text, readable on a phone
+  const axis = [...s.stage.querySelectorAll('.ar-pred-axis > span')].map((e) => e.textContent);
+  expect(axis).toEqual(['slower', `Delivers about year ${year}`, 'faster']);
+  // the marks are its legend, in the lines' colours
+  expect(s.stage.querySelector('.ar-predictor .ar-marks .ar-mark-3')!.textContent).toBe('★★★ 13.7');
+  expect(s.stage.querySelector('.ar-brief .ar-marks')).toBeNull();
+  expect(shown(s).marks).toBe(true);
+});
+
+test('after launch the predictor flies from where the ship is', () => {
+  const s = setup(L02, { upgrades: ['predictor'] });
+  click(s.primary); // 0.5c
+  step(600); // 10 s of flight
+  setLever(s, Math.round(bestLever(s.level, NONE) * 1000));
+  // From rest the best lever delivers about 13.5 (3 stars); 10 s at 0.5c later it cannot.
+  expect(said(s)).toBeGreaterThan(14);
+  until(delivered(s));
+  expect(Math.abs(said(s) - deliveredYear(s))).toBeLessThanOrEqual(0.0101);
+});
+
+test('level 05: after the news the predictor uses the new ripening time', () => {
+  const s = setup(L05, { classroom: true, upgrades: ['predictor'] });
+  click(s.middle); // the old best
+  click(s.primary);
+  expect(said(s)).toBeCloseTo(9.77, 1); // what is known at launch
+  until(() => s.status().startsWith('Colony, sent year 1'));
+  const prediction = said(s);
+  expect(prediction).toBeGreaterThan(11.5);
+  until(delivered(s));
+  expect(deliveredYear(s)).toBeCloseTo(11.77, 1);
+  expect(Math.abs(prediction - deliveredYear(s))).toBeLessThanOrEqual(0.0101);
+});
+
+test('the live predictor is re-flown a few times a second, not every frame', () => {
+  const s = setup(L02, { upgrades: ['predictor'] });
+  click(s.primary);
+  /** How many times the 101-flight curve is flown over the next `frames` frames. */
+  const count = (frames: number) => {
+    vi.mocked(liveCurve).mockClear();
+    step(frames);
+    return vi.mocked(liveCurve).mock.calls.length;
+  };
+  const n = count(120); // 2 s
+  expect(n).toBeGreaterThanOrEqual(6);
+  expect(n).toBeLessThanOrEqual(9);
+  pausedNow = true;
+  expect(count(120)).toBe(0);
+  pausedNow = false;
+  vi.mocked(liveCurve).mockClear();
+  setLever(s, 600); // a lever move re-flies it at once
+  expect(vi.mocked(liveCurve)).toHaveBeenCalledTimes(1);
+});
+
+test('the delivery year is shown to 2 decimals, so it never contradicts the stars', () => {
+  const l = LEVELS[L02];
+  const years = Array.from({ length: 1001 }, (_, i) => deliveryFor(l, NONE, i / 1000));
+  const i = years.reduce((b, y, j) => (Math.abs(y - 13.74) < Math.abs(years[b] - 13.74) ? j : b), 0);
+  const d = years[i];
+  expect(d).toBeGreaterThan(l.marks[1]); // 2 stars, though one decimal would say "13.7"
+  expect(d.toFixed(2)).toBe('13.74');
+  const s = setup(L02);
+  setLever(s, i);
+  click(s.primary);
+  until(delivered(s));
+  expect(s.status()).toBe('Delivered in year 13.74.');
+  vi.advanceTimersByTime(1200);
+  expect(s.complete).toHaveBeenCalledWith(2, expect.stringContaining('Colony clocks: 13.74 years.'));
 });
 
 test('reduced motion: the flight still plays, with no twinkle', () => {

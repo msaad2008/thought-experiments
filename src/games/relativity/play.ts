@@ -4,14 +4,16 @@
 import { fitSky } from '../../game-ui/fit';
 import { afterUnpaused } from '../../game-ui/play-helpers';
 import type { LevelContext } from '../../game-ui/types';
-import { LEVELS, bestLever, course as courseFor, ripenTime, shipYearsPerSecond, starsFor } from './levels';
+import { LEVELS, bestLever, course as courseFor, deliveryFor, ripenTime, shipYearsPerSecond, starsFor } from './levels';
 import {
-  AT_REST, G_LY, RETURN_SECONDS, RIPEN_MAX_SECONDS, START_BETA, advance, docked, etaStop, etaToLever, leverToEta,
+  AT_REST, G_LY, RETURN_SECONDS, RIPEN_MAX_SECONDS, START_BETA, advance, deliveryYear, docked, etaStop, etaToLever, leverToEta,
   seenColonyYear, type Ship,
 } from './physics';
-import { drawScene, fitView, predictorSvg, type Phase, type View } from './render';
+import { drawScene, fitView, liveCurve, predictorCurve, predictorSvg, type Curve, type Phase, type View } from './render';
 
 const TOAST_MS = 2600;
+/** After launch the Arrival predictor is re-flown from the ship's state at most this often (real ms). */
+const PREDICT_MS = 250;
 /** How long the delivery (or the arrival home) shows before the level end. */
 export const END_MS = 1200;
 /** Playback speeds, in the order the Speed button cycles; 1× is the start. */
@@ -68,7 +70,10 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
   let now = 0;
   let toastTimer = 0;
   let cancelWait = () => {};
-  let shownPredictor = -1;
+  /** What the predictor was last drawn for; and when (frame ms) its live curve was last flown. */
+  let predictorKey = '';
+  let predictedAt = 0;
+  let frameMs = 0;
   let fittedPanelH = -1;
 
   // ----- DOM -----
@@ -85,8 +90,30 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
   const hint = el('p', 'gv-hint', level.hint);
   const brief = el('div', 'ar-brief');
   const tripLine = el('p', 'ar-trip');
+  // The marks: short on screen (one line even at 320 px), a full sentence for screen readers.
   const [two, three] = level.marks;
-  brief.append(tripLine, el('p', 'ar-marks', `Deadline year ${level.deadline.toFixed(1)} · ★★ by ${two.toFixed(1)} · ★★★ by ${three.toFixed(1)}`));
+  const marks = el('p', 'ar-marks');
+  const marksShort = el('span', '');
+  marksShort.setAttribute('aria-hidden', 'true');
+  marksShort.append(
+    el('span', 'ar-mark ar-mark-deadline', `Deadline ${level.deadline.toFixed(1)}`), ' · ',
+    el('span', 'ar-mark ar-mark-2', `★★ ${two.toFixed(1)}`), ' · ',
+    el('span', 'ar-mark ar-mark-3', `★★★ ${three.toFixed(1)}`),
+  );
+  marks.append(marksShort, el('span', 'sr-only',
+    `Deadline year ${level.deadline.toFixed(1)}. Two stars by ${two.toFixed(1)}. Three stars by ${three.toFixed(1)}.`));
+
+  // The Arrival predictor (an upgrade): the marks line becomes its legend, in the lines' colours.
+  const predictor = ups.has('predictor') ? el('div', 'ar-predictor') : null;
+  const graph = el('div', 'ar-pred-graph');
+  const caption = el('span', 'ar-pred-caption');
+  if (predictor) {
+    const axis = el('p', 'ar-pred-axis');
+    axis.setAttribute('aria-hidden', 'true'); // the graph's label says the year
+    axis.append(el('span', '', 'slower'), caption, el('span', '', 'faster'));
+    predictor.append(marks, graph, axis);
+    brief.append(tripLine);
+  } else brief.append(tripLine, marks);
 
   const clocks = el('div', 'ar-clocks');
   const clock = (cls: string, label: string, caption?: string) => {
@@ -130,8 +157,6 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
     changed();
   });
   leverRow.append(leverHead, lever);
-
-  const predictor = ups.has('predictor') ? el('div', 'ar-predictor') : null;
 
   const actions = el('div', 'gv-actions');
   const primary = el('button', 'cta', 'Launch');
@@ -191,17 +216,15 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
     const briefing = phase === 'brief';
     panel.classList.toggle('ar-live', !briefing);
     hint.hidden = tripLine.hidden = !briefing;
+    brief.hidden = !briefing && !!predictor; // with the predictor the marks live in it: nothing is left here
     clocks.hidden = speedRow.hidden = news.hidden = briefing;
     const live = phase !== 'done' && phase !== 'late';
     lever.value = String(value);
     lever.disabled = !live;
     const eta = leverEta();
     lever.setAttribute('aria-valuetext', `${fmtC(Math.tanh(eta))}, gamma ${Math.cosh(eta).toFixed(2)}`);
-    leverVal.textContent = fmtC(Math.tanh(eta));
-    if (predictor && value !== shownPredictor) {
-      predictor.innerHTML = predictorSvg(level, ups, value / 1000);
-      shownPredictor = value;
-    }
+    leverVal.textContent = `${fmtC(Math.tanh(eta))} · γ ${Math.cosh(eta).toFixed(2)}`;
+    predict();
     const g = Math.round((course.accel / G_LY) * 100) / 100;
     tripLine.textContent =
       `${level.star} · ${D.toFixed(1)} light-years · crew limit ${g} g · culture needs ${R.toFixed(1)} yr of ship time`;
@@ -213,12 +236,40 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
     if (offerSolution) middle.removeAttribute('aria-label');
     else middle.setAttribute('aria-label', `Playback speed ${speedLabel(SPEEDS[speedIx])}. Press to change.`);
     middle.disabled = !offerSolution && !moving();
-    levelsBtn.disabled = phase === 'done'; // the level end is on its way
+    levelsBtn.disabled = phase === 'done' || phase === 'return'; // delivered: the level end is on its way
     readouts();
     // The panel grows or shrinks (the hint hiding, news wrapping): re-fit the sky to it, but never
     // while the ship is moving across it.
     if (phase !== 'flight' && phase !== 'return' && panel.getBoundingClientRect().height !== fittedPanelH) fit();
     if (reduced) draw(); // with reduced motion an idle sky is not redrawn every frame
+  }
+
+  /**
+   * The Arrival predictor. Before launch: every setting flown from rest (cached). After launch: every
+   * setting held from the ship as it is now, with the ripening time as it is now; re-flown when the lever
+   * or the ripening time changes, and otherwise at most every PREDICT_MS (`force`, from the frame loop).
+   * Hidden on the way home: the delivery is done. Frozen at the end of the run.
+   */
+  function predict(force = false): void {
+    if (!predictor) return;
+    predictor.hidden = home !== null;
+    if (home || phase === 'done' || phase === 'late') return;
+    const briefing = phase === 'brief';
+    const key = `${briefing}|${value}|${R}`;
+    if (!force && key === predictorKey) return;
+    predictorKey = key;
+    const s = value / 1000;
+    let curve: Curve, here: number;
+    if (briefing) {
+      curve = predictorCurve(level, ups);
+      here = deliveryFor(level, ups, s);
+    } else {
+      curve = liveCurve(level, course, ship, R);
+      here = deliveryYear(advance(ship, course, leverEta(), Infinity), R);
+      predictedAt = frameMs;
+    }
+    graph.innerHTML = predictorSvg(level, curve, s, here);
+    caption.textContent = `Delivers about year ${here.toFixed(2)}`;
   }
 
   /** Phones: the sky and the panel fit the viewport height without scrolling. */
@@ -353,7 +404,8 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
     deliveredYear = ship.t;
     const stars = starsFor(level, deliveredYear);
     if (stars >= 1) launchLever.set(level.id, launchValue);
-    const text = `Delivered in year ${deliveredYear.toFixed(1)}.`;
+    // Two decimals wherever the delivery year is shown: 13.74 must not read as "13.7" next to "★★★ 13.7".
+    const text = `Delivered in year ${deliveredYear.toFixed(2)}.`;
     if (level.roundTrip) {
       phase = 'return';
       home = AT_REST;
@@ -366,14 +418,14 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
     phase = 'done';
     changed();
     showToast(text);
-    finish(stars, `${level.insight} Colony clocks: ${deliveredYear.toFixed(1)} years. Yours: ${ship.tau.toFixed(1)}.`);
+    finish(stars, `${level.insight} Colony clocks: ${deliveredYear.toFixed(2)} years. Yours: ${ship.tau.toFixed(1)}.`);
   }
 
   function arriveHome(): void {
     phase = 'done';
     const A = earthYear(), B = shipYears();
     changed();
-    showToast(`Home in year ${A.toFixed(1)}.`);
+    showToast(`Home in year ${A.toFixed(2)}.`);
     finish(starsFor(level, deliveredYear), `${level.insight} Your twin on Earth aged ${A.toFixed(1)} years. You aged ${B.toFixed(1)}.`);
   }
 
@@ -406,6 +458,7 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
 
   function frame(ms: number): void {
     raf = requestAnimationFrame(frame);
+    frameMs = ms;
     const sec = ms / 1000;
     const dt = lastT === null ? 0 : Math.min(0.1, Math.max(0, sec - lastT));
     lastT = sec;
@@ -413,6 +466,7 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
     if (!ctx.paused() && !document.hidden && dt > 0) {
       now += dt;
       if (wasMoving) tick(dt * SPEEDS[speedIx]);
+      if ((phase === 'flight' || phase === 'ripening') && ms - predictedAt >= PREDICT_MS) predict(true);
     }
     if (moving()) readouts();
     if (wasMoving || !reduced) draw(); // the clocks move; an idle reduced-motion sky waits for a change

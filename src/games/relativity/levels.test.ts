@@ -3,7 +3,7 @@
 import { describe, expect, it } from 'vitest';
 import { LEVELS, bestLever, course, deliveryFor, ripenTime, shipYearsPerSecond, starsFor, type Level } from './levels';
 import {
-  AT_REST, LEVER_STEPS, START_BETA, TRIP_SECONDS, advance, deliveryYear, etaToLever, leverToEta, seenColonyYear,
+  AT_REST, LEVER_STEPS, RETURN_SECONDS, RIPEN_MAX_SECONDS, START_BETA, TRIP_SECONDS, advance, deliveryYear, etaToLever, leverToEta, seenColonyYear,
 } from './physics';
 
 const NONE: ReadonlySet<string> = new Set();
@@ -76,6 +76,30 @@ describe('relativity levels', () => {
       expect(startStars(l), l.id).toBeLessThanOrEqual(1);
       expect(etaToLever(Math.atanh(START_BETA), l.leverMax)).toBeGreaterThan(0);
     }
+  });
+
+  it('every level’s best trip plays in 30–40 real seconds at 1×', () => {
+    for (const l of LEVELS) {
+      const R = ripenTime(l, NONE);
+      const arrive = advance(AT_REST, course(l, NONE), leverToEta(bestLever(l, NONE), l.leverMax), Infinity);
+      const rate = shipYearsPerSecond(l);
+      const wait = arrive.tau < R ? Math.min((R - arrive.tau) / rate, RIPEN_MAX_SECONDS) : 0; // ripening plays at max(rate, left / 3)
+      const total = arrive.tau / rate + wait + (l.roundTrip ? RETURN_SECONDS : 0);
+      expect(total, l.id).toBeGreaterThanOrEqual(30);
+      expect(total, l.id).toBeLessThanOrEqual(40 + 1e-9);
+    }
+    // level 01: its best trip takes longer than the culture, so the trip sets the pace
+    expect(shipYearsPerSecond(LEVELS[0])).toBeGreaterThan(LEVELS[0].ripen / TRIP_SECONDS);
+  });
+
+  it('the copy never quotes numbers an upgrade can change, and says which clocks it means', () => {
+    const [l01, l02, l03, , l05, l06] = LEVELS;
+    expect(l01.distance).toBe(4.24); // Proxima Centauri, 4.246 ly
+    expect(l01.insight).toBe("Faster got the cure there sooner by the colony's clocks, and measured by those clocks, yours ran slow the whole way.");
+    expect(l02.hint).toBe("This culture needs years of your time to ripen. Go too fast and it won't be ripe when you arrive.");
+    expect(l03.hint).toBe("Your crew can't take much g-force, so speeding up and slowing down take years.");
+    expect(l06.hint).toBe('A strong crew and a tight deadline. Find the best speed.');
+    expect(l05.messages).toEqual([{ at: 1.0, text: 'The strain has changed: the culture now needs 7 years.', ripen: 7 }]);
   });
 
   it('upgrades scale the course and the ripening time', () => {

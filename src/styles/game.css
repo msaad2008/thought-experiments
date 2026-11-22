@@ -716,9 +716,19 @@ button.cta:disabled {
   text-overflow: ellipsis;
 }
 
+/* The marks in the colours of the predictor's lines. */
+.ar-mark-2 {
+  color: var(--accent);
+}
+
+.ar-mark-3 {
+  color: var(--gold);
+}
+
 .ar-clocks {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  /* The Earth block carries the caption "the clock you are passing": give it the room. */
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
   gap: 8px;
 }
 
@@ -777,8 +787,14 @@ button.cta:disabled {
   white-space: nowrap;
 }
 
+/* The speed never shrinks; the culture text gives way first (ellipsis), then its bar. */
+.ar-speed-text {
+  flex: none;
+}
+
 .ar-culture-box {
   display: flex;
+  flex: 0 1 auto;
   align-items: center;
   gap: 8px;
   min-width: 0;
@@ -786,10 +802,16 @@ button.cta:disabled {
   font-size: 13px;
 }
 
+.ar-culture {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .ar-bar {
   display: block;
-  flex: none;
-  width: 56px;
+  flex: 0 1 56px;
+  min-width: 24px;
   height: 6px;
   border-radius: 999px;
   background: rgb(255 255 255 / 0.12);
@@ -855,20 +877,55 @@ button.cta:disabled {
   cursor: not-allowed;
 }
 
-.ar-predictor svg {
-  display: block;
-  width: 100%;
-  height: 56px;
+/* The Arrival predictor: its legend (the marks), the graph stretched to the panel's width, and a line
+   with slower / the predicted year / faster. All words are page text at 12 px or more. */
+.ar-predictor {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
-.ar-live .ar-predictor svg {
-  height: 44px;
+.ar-predictor[hidden] {
+  display: none;
+}
+
+.ar-predictor .ar-marks,
+.ar-pred-axis {
+  margin: 0;
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 1.25;
+}
+
+.ar-pred-axis {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.ar-pred-caption {
+  overflow: hidden;
+  color: var(--text);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+}
+
+.ar-pred-graph svg {
+  display: block;
+  width: 100%;
+  height: 52px;
+}
+
+.ar-live .ar-pred-graph svg {
+  height: 34px;
 }
 
 @media (min-width: 900px) {
-  .ar-predictor svg,
-  .ar-live .ar-predictor svg {
-    height: 110px;
+  .ar-pred-graph svg,
+  .ar-live .ar-pred-graph svg {
+    height: 100px;
   }
 }
 
