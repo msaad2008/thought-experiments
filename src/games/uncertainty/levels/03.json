@@ -1,0 +1,44 @@
+{
+  "id": "03",
+  "title": "On the move",
+  "hint": "This ship is fast. Aim where it will be when the shell lands, not where it is now.",
+  "insight": "The whole cloud drifts at the measured speed. Leading the target is ordinary physics; the blur around the lead point is quantum.",
+  "massTonnes": 7500,
+  "flightTime": 1.5,
+  "hitRadius": 30,
+  "width": 380,
+  "presetsOnly": true,
+  "arrowToImpact": true,
+  "shots": [
+    {
+      "x": 60,
+      "y": 100,
+      "vx": 150,
+      "vy": 40
+    },
+    {
+      "x": 320,
+      "y": 200,
+      "vx": -140,
+      "vy": -30
+    },
+    {
+      "x": 80,
+      "y": 230,
+      "vx": 130,
+      "vy": -60
+    },
+    {
+      "x": 300,
+      "y": 80,
+      "vx": -120,
+      "vy": 50
+    },
+    {
+      "x": 190,
+      "y": 250,
+      "vx": 90,
+      "vy": -100
+    }
+  ]
+}

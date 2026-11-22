@@ -1,0 +1,44 @@
+{
+  "id": "02",
+  "title": "Long range",
+  "hint": "A light ship and a long 3-second flight. Which blur will grow the most?",
+  "insight": "Over a long flight, even a small blur in speed spreads into a big blur in position. A light ship makes it worse. Measuring the speed sharply wins.",
+  "massTonnes": 270,
+  "flightTime": 3,
+  "hitRadius": 256,
+  "width": 3200,
+  "presetsOnly": true,
+  "arrowToImpact": true,
+  "shots": [
+    {
+      "x": 1600,
+      "y": 1000,
+      "vx": 100,
+      "vy": 50
+    },
+    {
+      "x": 800,
+      "y": 1500,
+      "vx": 200,
+      "vy": -120
+    },
+    {
+      "x": 2400,
+      "y": 900,
+      "vx": -180,
+      "vy": 150
+    },
+    {
+      "x": 1200,
+      "y": 600,
+      "vx": 150,
+      "vy": 200
+    },
+    {
+      "x": 2000,
+      "y": 1700,
+      "vx": -100,
+      "vy": -200
+    }
+  ]
+}

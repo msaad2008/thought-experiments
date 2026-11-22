@@ -345,7 +345,8 @@ button.cta:disabled {
   width: 100%;
 }
 
-/* Slingshot play view: sky canvas, then hint, tray and buttons. */
+/* The play view layout shared by both games (Slingshot, Uncertain Fire): sky canvas, then a
+   panel with the hint, the game's controls and the buttons. */
 
 .view-host:has(.gv) {
   padding-block: 12px;
@@ -537,6 +538,156 @@ button.cta:disabled {
     text-align: center;
     white-space: normal;
   }
+}
+
+/* Uncertain Fire: the setting control, readout, Spread graph and shot dots. */
+
+/* Levels 1–3: a native radio pair drawn as a two-segment control. */
+.uc-modes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 3px;
+  border: 1.5px solid rgb(200 194 240 / 0.45);
+  border-radius: 999px;
+}
+
+.uc-mode {
+  position: relative;
+  display: flex;
+  min-height: 44px;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+}
+
+.uc-mode input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: inherit;
+}
+
+/* The span is the visible segment; sibling selectors, so it works where :has() does not. */
+.uc-mode span {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10px;
+  border-radius: 999px;
+}
+
+.uc-mode input:checked + span {
+  background: var(--accent);
+  color: #140f38;
+}
+
+.uc-mode input:focus-visible + span {
+  outline: 3px solid var(--gold);
+  outline-offset: 2px;
+}
+
+.uc-mode input:disabled + span {
+  opacity: 0.7;
+}
+
+.uc-mode input:disabled {
+  cursor: not-allowed;
+}
+
+/* Levels 4–8: a native range input between its two end labels. */
+.uc-dial {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-2);
+  font-size: 17px;
+}
+
+.uc-slider {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.uc-slider:focus-visible {
+  outline: 3px solid var(--gold);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+.uc-slider:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.uc-readout {
+  margin: 0;
+  font-size: 17px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.4;
+}
+
+.uc-graph svg {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: 56px;
+}
+
+@media (min-width: 900px) {
+  .uc-graph svg {
+    height: 80px;
+  }
+}
+
+/* The Spread graph (when owned) and the shot dots share one line. */
+.uc-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px 12px;
+}
+
+/* Five shots: hollow until fired, gold for a hit, a struck-through dot for a miss. */
+.uc-shots {
+  display: flex;
+  gap: 8px;
+}
+
+.uc-dot {
+  box-sizing: border-box;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgb(200 194 240 / 0.45);
+  border-radius: 50%;
+}
+
+.uc-dot.hit {
+  border-color: var(--gold);
+  background: var(--gold);
+}
+
+.uc-dot.miss {
+  border-color: var(--text-2);
+  background: linear-gradient(45deg, transparent 40%, var(--text-2) 40% 60%, transparent 60%);
+}
+
+/* Three buttons on one row on a 360 px phone. */
+.gv-panel:has(.uc-shots) .gv-actions {
+  flex-wrap: nowrap;
+  gap: 8px;
+}
+
+.gv-panel:has(.uc-shots) .gv-actions > button {
+  padding-inline: 10px;
+  white-space: nowrap;
 }
 
 .end {

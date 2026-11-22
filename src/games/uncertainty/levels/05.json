@@ -1,0 +1,44 @@
+{
+  "id": "05",
+  "title": "Heavy cruiser",
+  "hint": "A heavy cruiser. The same momentum blur gives a heavy ship less speed blur.",
+  "insight": "Heavier objects spread more slowly, so the best measurement is sharper. Everyday objects are so heavy compared with ħ that they never look blurred.",
+  "massTonnes": 3500,
+  "flightTime": 2,
+  "hitRadius": 50,
+  "width": 620,
+  "presetsOnly": false,
+  "arrowToImpact": true,
+  "shots": [
+    {
+      "x": 300,
+      "y": 250,
+      "vx": 25,
+      "vy": 10
+    },
+    {
+      "x": 150,
+      "y": 300,
+      "vx": 40,
+      "vy": -30
+    },
+    {
+      "x": 450,
+      "y": 200,
+      "vx": -30,
+      "vy": 20
+    },
+    {
+      "x": 250,
+      "y": 150,
+      "vx": 20,
+      "vy": 40
+    },
+    {
+      "x": 400,
+      "y": 350,
+      "vx": -40,
+      "vy": -35
+    }
+  ]
+}

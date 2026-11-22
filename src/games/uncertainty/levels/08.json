@@ -1,0 +1,44 @@
+{
+  "id": "08",
+  "title": "Final salvo",
+  "hint": "Everything at once.",
+  "insight": "No measurement can beat σ_min = √(ħt/m). That limit is not bad equipment: it is built into nature.",
+  "massTonnes": 1900,
+  "flightTime": 3,
+  "hitRadius": 83,
+  "width": 1040,
+  "presetsOnly": false,
+  "arrowToImpact": false,
+  "shots": [
+    {
+      "x": 250,
+      "y": 350,
+      "vx": 100,
+      "vy": 50
+    },
+    {
+      "x": 800,
+      "y": 300,
+      "vx": -110,
+      "vy": 60
+    },
+    {
+      "x": 500,
+      "y": 650,
+      "vx": 60,
+      "vy": -90
+    },
+    {
+      "x": 200,
+      "y": 550,
+      "vx": 90,
+      "vy": -70
+    },
+    {
+      "x": 850,
+      "y": 600,
+      "vx": -80,
+      "vy": -80
+    }
+  ]
+}

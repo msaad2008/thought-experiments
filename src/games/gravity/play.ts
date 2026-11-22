@@ -1,4 +1,5 @@
 // The Slingshot play view: placement editing, input, and the flight loop.
+import { fitSky } from '../../game-ui/fit';
 import type { LevelContext } from '../../game-ui/types';
 import { LEVELS, toSimInput } from './levels';
 import { BODY_TYPES, DT, WORLD, clockRate, createSim, radius, simulate, type Body, type BodyType, type Outcome, type Point, type Sim } from './physics';
@@ -199,23 +200,8 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
     if (reduced) draw(); // with reduced motion an idle sky is not redrawn every frame
   }
 
-  /**
-   * Phones (single column): size the sky so it, the hint, the tray and the
-   * buttons all fit the viewport height without scrolling (never below 200 px).
-   */
-  function fit(): void {
-    if (window.matchMedia?.('(min-width: 900px)').matches) {
-      sky.style.width = '';
-      return;
-    }
-    const host = root.closest('.view-host');
-    const padBottom = host ? parseFloat(getComputedStyle(host).paddingBottom) || 0 : 0;
-    const s = sky.getBoundingClientRect();
-    const rest = root.getBoundingClientRect().height - s.height; // gap + panel
-    const border = s.height - sky.clientHeight; // style.width sets the content box
-    const avail = window.innerHeight - (s.top + window.scrollY) - rest - padBottom;
-    sky.style.width = `${Math.max(200, Math.min(root.clientWidth, Math.floor(avail)) - border)}px`;
-  }
+  /** Phones: the sky, hint, tray and buttons all fit the viewport height without scrolling. */
+  const fit = () => fitSky(root, sky);
 
   function onWindowResize(): void {
     fit();
