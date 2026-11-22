@@ -395,6 +395,24 @@ button.cta:disabled {
   opacity: 1;
 }
 
+.gv-remove {
+  position: absolute;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid rgb(255 255 255 / 0.35);
+  border-radius: 999px;
+  background: rgb(13 20 51 / 0.9);
+  color: #fff;
+  font: inherit;
+  font-size: 17px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.gv-remove:hover {
+  border-color: #fff;
+}
+
 .gv-panel {
   display: flex;
   flex-direction: column;

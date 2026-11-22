@@ -228,6 +228,7 @@ export function mountGame(cfg: GameConfig, root: HTMLElement): void {
     cleanup = cfg.startLevel(index, {
       stage,
       upgrades: ownedUpgrades(cfg.upgrades, progress, classroom),
+      classroom,
       levels: () => showSelect(),
       complete(starCount, insight) {
         if (classroom) {

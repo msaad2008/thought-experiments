@@ -22,7 +22,7 @@ afterEach(() => {
   document.body.replaceChildren();
 });
 
-function setup(index: number) {
+function setup(index: number, classroom = false) {
   vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
   vi.spyOn(HTMLCanvasElement.prototype, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, SIDE, SIDE));
   if (!Element.prototype.setPointerCapture) {
@@ -33,14 +33,15 @@ function setup(index: number) {
   document.body.append(stage);
   const complete = vi.fn();
   const levels = vi.fn();
-  dispose = startLevel(index, { stage, upgrades: new Set(), complete, levels });
+  dispose = startLevel(index, { stage, upgrades: new Set(), classroom, complete, levels });
   const tray = stage.querySelector<HTMLElement>('.gv-tray')!;
   vi.spyOn(tray, 'getBoundingClientRect').mockReturnValue(TRAY);
   const items = [...stage.querySelectorAll<HTMLButtonElement>('.gv-item')];
   const [launch, reset, levelsBtn] = [...stage.querySelectorAll<HTMLButtonElement>('.gv-actions > button')];
   const canvas = stage.querySelector('canvas')!;
   const count = (i: number) => items[i].querySelector('.gv-count')!.textContent;
-  return { stage, canvas, items, launch, reset, levelsBtn, levels, count };
+  const remove = stage.querySelector<HTMLButtonElement>('.gv-remove')!;
+  return { stage, canvas, items, launch, reset, levelsBtn, levels, count, remove };
 }
 
 function ptr(target: Element, type: string, x: number, y: number, pointerType = 'mouse'): void {
@@ -121,6 +122,48 @@ test('A placed body dropped on the tray goes back to it', () => {
   ptr(s.canvas, 'pointermove', 100, 450);
   ptr(s.canvas, 'pointerup', 100, 450);
   expect(s.count(0)).toBe('2');
+});
+
+test('While flying, the Reset slot cycles the flight speed', () => {
+  const s = setup(0);
+  trayDrop(s, 0, 480, 410);
+  s.launch.click();
+  expect(s.reset.textContent).toBe('Speed 1×');
+  const seen = [1, 2, 3, 4].map(() => (s.reset.click(), s.reset.textContent));
+  expect(seen).toEqual(['Speed 2×', 'Speed 4×', 'Speed ½×', 'Speed 1×']);
+  s.launch.click(); // Stop
+  expect(s.reset.textContent).toBe('Reset');
+});
+
+test('Classroom mode offers the solution on an empty sky; students never see it', () => {
+  const student = setup(1);
+  expect(student.reset.textContent).toBe('Reset');
+  expect(student.reset.disabled).toBe(true);
+  dispose?.();
+  document.body.replaceChildren();
+  vi.restoreAllMocks();
+
+  const s = setup(1, true);
+  expect(s.reset.textContent).toBe('Solution');
+  s.reset.click();
+  expect(s.count(0)).toBe('0'); // level 02's solution uses both moons
+  expect(s.reset.textContent).toBe('Reset');
+  s.reset.click();
+  expect(s.count(0)).toBe('2');
+  expect(s.reset.textContent).toBe('Solution');
+});
+
+test('Selecting a placed body shows ✕ Remove, which sends it back to the tray', () => {
+  const s = setup(1);
+  trayDrop(s, 0, 360, 250);
+  expect(s.remove.hidden).toBe(false); // a dropped body is selected
+  s.remove.click();
+  expect(s.count(0)).toBe('2');
+  expect(s.remove.hidden).toBe(true);
+  trayDrop(s, 0, 360, 250);
+  ptr(s.canvas, 'pointerdown', 50 * K, 900 * K); // tap empty sky: deselect
+  ptr(s.canvas, 'pointerup', 50 * K, 900 * K);
+  expect(s.remove.hidden).toBe(true);
 });
 
 test('The Levels button leaves for the level select', () => {

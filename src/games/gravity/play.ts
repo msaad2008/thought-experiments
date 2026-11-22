@@ -3,7 +3,7 @@ import type { LevelContext } from '../../game-ui/types';
 import { LEVELS, toSimInput } from './levels';
 import { BODY_TYPES, DT, WORLD, clockRate, createSim, radius, simulate, type Body, type BodyType, type Outcome, type Point, type Sim } from './physics';
 import { canPlace, nearestFree, remaining } from './place';
-import { bodyColor, drawScene, fitView, type View } from './render';
+import { bodyColor, drawScene, fitView, type TrailPoint, type View } from './render';
 
 const TOAST_MS = 2600;
 const WIN_DELAY_MS = 800;
@@ -11,6 +11,12 @@ const HIT_MIN_PX = 22;
 const DRAG_START_PX = 6;
 /** A body dragged from the tray by finger sits this far above it, so it stays visible. */
 const TOUCH_LIFT_PX = 44;
+
+/** Playback speeds for a flight, in the order the Speed button cycles. Only the watching changes: the steps are the same. */
+export const SPEEDS = [1, 2, 4, 0.5] as const;
+/** Kept across levels for this visit; never saved. */
+let flightSpeed: number = 1;
+const speedLabel = (s: number) => `${s === 0.5 ? '½' : s}×`;
 
 const MISS: Record<Exclude<Outcome, 'goal' | 'crash'>, string> = {
   captured: 'Swallowed by the black hole.',
@@ -54,8 +60,8 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
   let simBodies: Body[] = [];
   let steps = 0;
   let acc = 0;
-  let trail: Point[] = [];
-  let lastPath: Point[] = [];
+  let trail: TrailPoint[] = [];
+  let lastPath: TrailPoint[] = [];
   let aim: Point[] = [];
   let finished = false;
   let disposed = false;
@@ -79,7 +85,11 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
   clock.hidden = true;
   const toast = el('div', 'gv-toast');
   toast.setAttribute('role', 'status');
-  sky.append(canvas, clock, toast);
+  const removeBtn = el('button', 'gv-remove', '✕ Remove');
+  removeBtn.type = 'button';
+  removeBtn.hidden = true;
+  removeBtn.addEventListener('click', removeSelected);
+  sky.append(canvas, clock, toast, removeBtn);
 
   const panel = el('div', 'gv-panel');
   const hint = el('p', 'gv-hint', level.hint);
@@ -105,12 +115,25 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
   launchBtn.addEventListener('click', () => (sim ? stop() : launch()));
   const resetBtn = el('button', 'btn-ghost', 'Reset');
   resetBtn.type = 'button';
+  // One slot, three jobs: Speed while flying, Solution (classroom, empty sky), otherwise Reset.
   resetBtn.addEventListener('click', () => {
-    if (drag || sim || finished) return;
-    placed = [];
-    selected = -1;
-    changed();
-    say('All bodies cleared.');
+    if (drag || finished) return;
+    if (sim) {
+      flightSpeed = SPEEDS[(SPEEDS.indexOf(flightSpeed as (typeof SPEEDS)[number]) + 1) % SPEEDS.length];
+      changed();
+      say(`Flight speed ${speedLabel(flightSpeed)}.`);
+    } else if (ctx.classroom && placed.length === 0) {
+      placed = level.solution.map((b) => ({ ...b }));
+      selected = -1;
+      changed();
+      showToast('Solution placed. Press Launch to watch it.');
+      say('Solution placed. Press Launch to watch it.');
+    } else {
+      placed = [];
+      selected = -1;
+      changed();
+      say('All bodies cleared.');
+    }
   });
   const levelsBtn = el('button', 'btn-ghost', 'Levels');
   levelsBtn.type = 'button';
@@ -155,8 +178,13 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
     launchBtn.textContent = sim ? 'Stop' : 'Launch';
     launchBtn.className = sim ? 'btn-ghost' : 'cta';
     launchBtn.disabled = finished;
-    resetBtn.disabled = !!sim || finished || placed.length === 0;
+    const solution = !sim && ctx.classroom && placed.length === 0;
+    resetBtn.textContent = sim ? `Speed ${speedLabel(flightSpeed)}` : solution ? 'Solution' : 'Reset';
+    if (sim) resetBtn.setAttribute('aria-label', `Flight speed ${speedLabel(flightSpeed)}. Press to change.`);
+    else resetBtn.removeAttribute('aria-label');
+    resetBtn.disabled = finished || (!sim && !solution && placed.length === 0);
     levelsBtn.disabled = finished; // the level end is on its way
+    placeRemove();
   }
 
   /**
@@ -193,6 +221,7 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
   }
 
   function draw(): void {
+    placeRemove();
     const g = view && canvas.getContext('2d');
     if (!view || !g) return;
     const flying = sim !== null;
@@ -204,7 +233,7 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
       ship: sim ? sim.ship : level.ship,
       editing: !flying,
       collected: sim ? sim.collected : new Set(),
-      trail: sim ? [...trail, { x: sim.ship.x, y: sim.ship.y }] : [],
+      trail: sim ? [...trail, here(sim)] : [],
       lastPath,
       aim,
       time: now,
@@ -215,6 +244,35 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
       if (clock.textContent !== text) clock.textContent = text;
     }
   }
+
+  /** The ✕ Remove button sits just above and to the right of the selected body. */
+  function placeRemove(): void {
+    const show = !!view && !sim && !finished && !drag && selected >= 0 && selected < placed.length;
+    if (removeBtn.hidden !== !show) removeBtn.hidden = !show;
+    if (!show) return;
+    const b = placed[selected];
+    const r = radius(b.type) * view!.k;
+    const w = removeBtn.offsetWidth || 110;
+    const h = removeBtn.offsetHeight || 44;
+    const x = Math.min(view!.w - w - 4, Math.max(4, view!.ox + b.x * view!.k + r * 0.7));
+    let y = view!.oy + b.y * view!.k - r * 0.7 - h;
+    if (y < 4) y = view!.oy + b.y * view!.k + r + 6; // no room above: go below
+    const left = `${Math.round(x)}px`, top = `${Math.round(Math.min(view!.h - h - 4, y))}px`;
+    if (removeBtn.style.left !== left) removeBtn.style.left = left;
+    if (removeBtn.style.top !== top) removeBtn.style.top = top;
+  }
+
+  function removeSelected(): void {
+    if (drag || sim || finished || selected < 0 || selected >= placed.length) return;
+    const t = placed[selected].type;
+    placed.splice(selected, 1);
+    selected = -1;
+    changed();
+    say(`${BODY_TYPES[t].name} removed.`);
+    canvas.focus({ preventScroll: true });
+  }
+
+  const here = (s: Sim): TrailPoint => ({ x: s.ship.x, y: s.ship.y, v: Math.hypot(s.ship.vx, s.ship.vy) });
 
   /** World coordinates of a pointer, even off the canvas. */
   function toWorld(e: PointerEvent): Point | null {
@@ -237,7 +295,7 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
     const input = toSimInput(level, placed);
     simBodies = input.bodies;
     sim = createSim(input);
-    trail = [{ x: level.ship.x, y: level.ship.y }];
+    trail = [here(sim)];
     steps = 0;
     acc = 0;
     toast.classList.remove('on');
@@ -249,7 +307,7 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
   /** Back to editing; the flight so far stays drawn faintly. */
   function endFlight(): void {
     if (!sim) return;
-    lastPath = [...trail, { x: sim.ship.x, y: sim.ship.y }];
+    lastPath = [...trail, here(sim)];
     sim = null;
     clock.hidden = true;
     changed();
@@ -264,7 +322,7 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
     if (outcome === 'goal') {
       if (finished) return;
       finished = true;
-      lastPath = [...trail, { x: s.ship.x, y: s.ship.y }];
+      lastPath = [...trail, here(s)];
       changed();
       const stars = s.collected.size;
       let insight = level.insight;
@@ -298,11 +356,11 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
     lastT = sec;
     now += dt;
     if (sim && !sim.outcome) {
-      acc += dt;
+      acc += dt * flightSpeed; // faster or slower watching; the same whole DT steps
       while (acc >= DT && !sim.outcome) {
         sim.step();
         acc -= DT;
-        if (++steps % 4 === 0) trail.push({ x: sim.ship.x, y: sim.ship.y });
+        if (++steps % 4 === 0) trail.push(here(sim));
       }
       if (sim.outcome) landed(sim, sim.outcome);
     }
@@ -363,6 +421,7 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
       if (d * view!.k <= Math.max(radius(b.type) * view!.k, HIT_MIN_PX) && d < best) [best, hit] = [d, i];
     });
     selected = hit;
+    placeRemove();
     if (hit >= 0) {
       const b = placed[hit];
       drag = { type: b.type, from: hit, pointerId: e.pointerId, sx: e.clientX, sy: e.clientY, moved: false, off: { x: b.x - w.x, y: b.y - w.y }, pos: { x: b.x, y: b.y } };
@@ -461,11 +520,9 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
       } else say("Can't move there.");
     } else if (e.key === 'Delete' || e.key === 'Backspace') {
       e.preventDefault();
-      const t = placed[selected].type;
-      placed.splice(selected, 1);
-      selected = placed.length - 1;
+      removeSelected();
+      selected = placed.length - 1; // keyboard users keep a body selected
       changed();
-      say(`${BODY_TYPES[t].name} removed.`);
     }
   }
 
