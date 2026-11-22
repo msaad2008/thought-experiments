@@ -74,29 +74,36 @@ function line(g: CanvasRenderingContext2D, a: Point, b: Point): void {
   g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.stroke();
 }
 
-/** A cartoon warship, bow to the right, `s` metres wide. */
-function ship(g: CanvasRenderingContext2D, p: Point, s: number, alpha: number, u: number, dashed = false): void {
+/** A cartoon space warship, nose to the right, `s` metres long. Static (no pulsing). */
+function ship(g: CanvasRenderingContext2D, p: Point, s: number, alpha: number, u: number, dashed = false, engine = true): void {
   g.save();
   g.globalAlpha = alpha;
   g.translate(p.x, p.y);
-  const hull = () => {
+  const poly = (pts: number[][]) => {
     g.beginPath();
-    g.moveTo(-s / 2, -s * 0.08); g.lineTo(s / 2, -s * 0.08); g.lineTo(s * 0.34, s * 0.22); g.lineTo(-s * 0.4, s * 0.22);
+    pts.forEach(([x, y], i) => (i ? g.lineTo(x * s, y * s) : g.moveTo(x * s, y * s)));
     g.closePath();
   };
-  const cabin = () => { g.beginPath(); g.rect(-s * 0.2, -s * 0.3, s * 0.34, s * 0.22); };
+  const hull = [[0.5, 0], [0.12, -0.13], [-0.36, -0.12], [-0.46, -0.06], [-0.46, 0.06], [-0.36, 0.12], [0.12, 0.13]];
   if (dashed) {
     g.strokeStyle = '#d9ccff'; g.lineWidth = 2 * u; g.setLineDash([5 * u, 4 * u]);
-    hull(); g.stroke(); cabin(); g.stroke();
+    poly(hull); g.stroke();
+    g.beginPath(); g.arc(s * 0.1, 0, s * 0.06, 0, TAU); g.stroke();
   } else {
-    g.fillStyle = '#6c5bb5'; hull(); g.fill();
-    g.fillStyle = '#4a3b8c'; g.beginPath(); g.rect(-s * 0.4, s * 0.1, s * 0.74, s * 0.12); g.fill();
-    g.fillStyle = '#d9ccff'; cabin(); g.fill();
-    g.fillStyle = '#ff7a3d'; g.beginPath(); g.rect(-s * 0.08, -s * 0.46, s * 0.1, s * 0.17); g.fill();
-    g.fillStyle = '#3a2a7a';
-    for (const f of [-0.14, 0, 0.1]) { g.beginPath(); g.arc(s * f, -s * 0.19, s * 0.035, 0, TAU); g.fill(); }
-    g.strokeStyle = GOLD; g.lineWidth = 1.5 * u; line(g, { x: s * 0.3, y: -s * 0.08 }, { x: s * 0.3, y: -s * 0.4 });
-    g.fillStyle = GOLD; g.beginPath(); g.moveTo(s * 0.3, -s * 0.4); g.lineTo(s * 0.44, -s * 0.34); g.lineTo(s * 0.3, -s * 0.28); g.fill();
+    if (engine) {
+      for (const y of [-0.06, 0.06]) glow(g, { x: -s * 0.5, y: y * s }, s * 0.14, '255,122,61', 0.8);
+    }
+    g.fillStyle = '#4a3b8c'; // fins and underside
+    poly([[-0.1, 0.1], [-0.4, 0.3], [-0.46, 0.3], [-0.36, 0.1]]);
+    g.fill();
+    poly([[-0.1, -0.1], [-0.4, -0.3], [-0.46, -0.3], [-0.36, -0.1]]);
+    g.fill();
+    g.fillStyle = '#ff7a3d'; // engine nozzles
+    for (const y of [-0.08, 0.02]) { g.beginPath(); g.roundRect(-s * 0.52, y * s, s * 0.08, s * 0.06, s * 0.015); g.fill(); }
+    g.fillStyle = '#6c5bb5'; poly(hull); g.fill();
+    g.fillStyle = '#4a3b8c'; poly([[0.5, 0], [0.12, 0.13], [-0.36, 0.12], [-0.46, 0.06], [-0.46, 0.0], [0.3, 0]]); g.fill();
+    g.fillStyle = '#d9ccff'; // cockpit
+    g.beginPath(); g.ellipse(s * 0.12, -s * 0.02, s * 0.1, s * 0.05, 0, 0, TAU); g.fill();
   }
   g.restore();
 }
@@ -165,7 +172,7 @@ export function drawScene(g: CanvasRenderingContext2D, v: View, s: Scene): void 
 
   // a few faint stars, fixed positions
   for (let i = 0; i < 28; i++) {
-    disc(g, { x: (((i * 37) % 100) / 100) * W, y: (((i * 61) % 97) / 100) * W * 0.85 }, (1 + (i % 3) * 0.5) * u, 'rgba(255,255,255,0.35)');
+    disc(g, { x: ((i * 0.618034 + 0.13) % 1) * W, y: ((i * 0.754878 + 0.31) % 1) * W * 0.85 }, (0.8 + (i % 3) * 0.4) * u, 'rgba(255,255,255,0.3)');
   }
 
   for (const sm of s.shotMarks) {
@@ -180,7 +187,7 @@ export function drawScene(g: CanvasRenderingContext2D, v: View, s: Scene): void 
     g.globalAlpha = 1;
   }
 
-  const shipW = Math.max(s.level.hitRadius * 0.9, 26 * u);
+  const shipW = Math.max(s.level.hitRadius * 1.8, 26 * u);
   const aimPt = s.aim ? { x: fin(s.aim.x), y: fin(s.aim.y) } : null;
   // radial gradient reaching zero alpha at 2.5σ, never smaller than ~6 CSS px
   const cloud = (c: Point, sigma: number) => glow(g, c, Math.max(2.5 * fin(sigma, 1), 6 * u), '155,123,255', 0.6);
@@ -224,7 +231,7 @@ export function drawScene(g: CanvasRenderingContext2D, v: View, s: Scene): void 
     if (f) {
       g.strokeStyle = 'rgba(255,210,94,0.35)'; g.lineWidth = 1.5 * u; g.setLineDash([4 * u, 4 * u]);
       g.beginPath(); g.arc(f.x, f.y, s.level.hitRadius, 0, TAU); g.stroke(); g.setLineDash([]);
-      ship(g, f, shipW, s.hit ? 1 - 0.85 * clamp01(T / 1.2) : 1, u);
+      ship(g, f, shipW, s.hit ? 1 - 0.85 * clamp01(T / 1.2) : 1, u, false, !s.reducedMotion);
       if (s.hit) {
         if (!s.reducedMotion && T < 0.35) glow(g, f, s.level.hitRadius * (0.6 + 3 * T), '255,240,200', 0.9 * (1 - T / 0.35));
         const grow = clamp01(T / 1.0), sc = 0.4 + grow * 0.6;
