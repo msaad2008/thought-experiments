@@ -17,6 +17,8 @@ export const SPEEDS = [1, 2, 4, 0.5] as const;
 /** Kept across levels for this visit; never saved. */
 let flightSpeed: number = 1;
 const speedLabel = (s: number) => `${s === 0.5 ? '½' : s}×`;
+/** Each level's placements from its last win, for "Retry with this setup". This visit only; never saved. */
+const lastSetup = new Map<string, Body[]>();
 
 const MISS: Record<Exclude<Outcome, 'goal' | 'crash'>, string> = {
   captured: 'Swallowed by the black hole.',
@@ -52,7 +54,7 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
   const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
   const types = (Object.keys(level.inventory) as BodyType[]).sort((a, b) => BODY_TYPES[a].tier - BODY_TYPES[b].tier);
 
-  let placed: Body[] = [];
+  let placed: Body[] = ctx.keepSetup ? (lastSetup.get(level.id) ?? []).map((b) => ({ ...b })) : [];
   let selected = -1;
   let drag: Drag | null = null;
   let suppressClick = false;
@@ -85,11 +87,7 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
   clock.hidden = true;
   const toast = el('div', 'gv-toast');
   toast.setAttribute('role', 'status');
-  const removeBtn = el('button', 'gv-remove', '✕ Remove');
-  removeBtn.type = 'button';
-  removeBtn.hidden = true;
-  removeBtn.addEventListener('click', removeSelected);
-  sky.append(canvas, clock, toast, removeBtn);
+  sky.append(canvas, clock, toast);
 
   const panel = el('div', 'gv-panel');
   const hint = el('p', 'gv-hint', level.hint);
@@ -115,10 +113,16 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
   launchBtn.addEventListener('click', () => (sim ? stop() : launch()));
   const resetBtn = el('button', 'btn-ghost', 'Reset');
   resetBtn.type = 'button';
-  // One slot, three jobs: Speed while flying, Solution (classroom, empty sky), otherwise Reset.
+  // One slot, one job at a time (the label always says which): Speed while flying,
+  // Remove (red) while a placed body is selected, Solution (classroom, empty sky), otherwise Reset.
   let solutionAt = -Infinity; // a quick second tap must not wipe the solution just placed
+  const hasSelection = () => selected >= 0 && selected < placed.length;
   resetBtn.addEventListener('click', () => {
     if (drag || finished) return;
+    if (!sim && hasSelection()) {
+      removeSelected();
+      return;
+    }
     if (sim) {
       flightSpeed = SPEEDS[(SPEEDS.indexOf(flightSpeed as (typeof SPEEDS)[number]) + 1) % SPEEDS.length];
       changed();
@@ -182,13 +186,15 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
     launchBtn.textContent = flying ? 'Stop' : 'Launch';
     launchBtn.className = flying ? 'btn-ghost' : 'cta';
     launchBtn.disabled = finished;
+    const remove = !sim && !finished && hasSelection();
     const solution = !sim && ctx.classroom && placed.length === 0;
-    resetBtn.textContent = flying ? `Speed ${speedLabel(flightSpeed)}` : solution ? 'Solution' : 'Reset';
+    resetBtn.textContent = flying ? `Speed ${speedLabel(flightSpeed)}` : remove ? 'Remove' : solution ? 'Solution' : 'Reset';
+    resetBtn.className = remove ? 'btn-danger' : 'btn-ghost';
     if (flying) resetBtn.setAttribute('aria-label', `Flight speed ${flightSpeed === 0.5 ? 'half' : speedLabel(flightSpeed)}. Press to change.`);
+    else if (remove) resetBtn.setAttribute('aria-label', `Remove the selected ${name(placed[selected].type)}`);
     else resetBtn.removeAttribute('aria-label');
     resetBtn.disabled = finished || (!sim && !solution && placed.length === 0);
     levelsBtn.disabled = finished; // the level end is on its way
-    placeRemove();
   }
 
   /**
@@ -225,7 +231,6 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
   }
 
   function draw(): void {
-    placeRemove();
     const g = view && canvas.getContext('2d');
     if (!view || !g) return;
     const flying = sim !== null;
@@ -247,32 +252,6 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
       const text = `Ship clock ×${clockRate(sim.ship, simBodies).toFixed(2)}`;
       if (clock.textContent !== text) clock.textContent = text;
     }
-  }
-
-  /** The ✕ Remove button sits just above and to the right of the selected body. */
-  function placeRemove(): void {
-    const show = !!view && !sim && !finished && !drag && selected >= 0 && selected < placed.length;
-    if (removeBtn.hidden !== !show) removeBtn.hidden = !show;
-    if (!show) return;
-    const b = placed[selected];
-    const v = view!;
-    const r = radius(b.type) * v.k;
-    const cx = v.ox + b.x * v.k, cy = v.oy + b.y * v.k;
-    const w = removeBtn.offsetWidth || 110;
-    const h = removeBtn.offsetHeight || 44;
-    const M = 4, G = 6;
-    // Above-right, above-left, below-right, below-left: the first that fits the sky without covering the body.
-    const spots = [
-      [cx + r * 0.5, cy - r - G - h],
-      [cx - r * 0.5 - w, cy - r - G - h],
-      [cx + r * 0.5, cy + r + G],
-      [cx - r * 0.5 - w, cy + r + G],
-    ].map(([x, y]) => [Math.min(v.w - w - M, Math.max(M, x)), Math.min(v.h - h - M, Math.max(M, y))]);
-    const covers = ([x, y]: number[]) => Math.hypot(cx - Math.max(x, Math.min(cx, x + w)), cy - Math.max(y, Math.min(cy, y + h))) < r + 2;
-    const [x, y] = spots.find((s) => !covers(s)) ?? spots[0];
-    const left = `${Math.round(x)}px`, top = `${Math.round(y)}px`;
-    if (removeBtn.style.left !== left) removeBtn.style.left = left;
-    if (removeBtn.style.top !== top) removeBtn.style.top = top;
   }
 
   function removeSelected(): void {
@@ -304,7 +283,6 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
   // ----- flight -----
   function launch(): void {
     if (sim || finished || drag) return;
-    if (document.activeElement === removeBtn) canvas.focus({ preventScroll: true }); // it is about to hide
     hint.hidden = true;
     const input = toSimInput(level, placed);
     simBodies = input.bodies;
@@ -336,6 +314,7 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
     if (outcome === 'goal') {
       if (finished) return;
       finished = true;
+      lastSetup.set(level.id, placed.map((b) => ({ ...b })));
       lastPath = [...trail, here(s)];
       changed();
       const stars = s.collected.size;
@@ -440,7 +419,7 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
       drag = { type: b.type, from: hit, pointerId: e.pointerId, sx: e.clientX, sy: e.clientY, moved: false, off: { x: b.x - w.x, y: b.y - w.y }, pos: { x: b.x, y: b.y } };
       canvas.setPointerCapture(e.pointerId);
     }
-    placeRemove(); // hidden while pressed; shown again on release
+    changed(); // the Remove/Reset slot follows the selection
   }
 
   /**

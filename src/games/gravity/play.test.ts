@@ -22,7 +22,7 @@ afterEach(() => {
   document.body.replaceChildren();
 });
 
-function setup(index: number, classroom = false) {
+function setup(index: number, classroom = false, keepSetup = false) {
   vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
   vi.spyOn(HTMLCanvasElement.prototype, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, SIDE, SIDE));
   if (!Element.prototype.setPointerCapture) {
@@ -33,15 +33,14 @@ function setup(index: number, classroom = false) {
   document.body.append(stage);
   const complete = vi.fn();
   const levels = vi.fn();
-  dispose = startLevel(index, { stage, upgrades: new Set(), classroom, complete, levels });
+  dispose = startLevel(index, { stage, upgrades: new Set(), classroom, keepSetup, complete, levels });
   const tray = stage.querySelector<HTMLElement>('.gv-tray')!;
   vi.spyOn(tray, 'getBoundingClientRect').mockReturnValue(TRAY);
   const items = [...stage.querySelectorAll<HTMLButtonElement>('.gv-item')];
   const [launch, reset, levelsBtn] = [...stage.querySelectorAll<HTMLButtonElement>('.gv-actions > button')];
   const canvas = stage.querySelector('canvas')!;
   const count = (i: number) => items[i].querySelector('.gv-count')!.textContent;
-  const remove = stage.querySelector<HTMLButtonElement>('.gv-remove')!;
-  return { stage, canvas, items, launch, reset, levelsBtn, levels, count, remove, complete };
+  return { stage, canvas, items, launch, reset, levelsBtn, levels, count, complete };
 }
 
 function ptr(target: Element, type: string, x: number, y: number, pointerType = 'mouse'): void {
@@ -73,6 +72,9 @@ test('Reset during a drag is ignored, and the drop still lands', () => {
   s.reset.click();
   ptr(s.canvas, 'pointerup', 650 * K, 500 * K);
   expect(s.count(0)).toBe('0');
+  ptr(s.canvas, 'pointerdown', 50 * K, 900 * K); // tap empty sky: deselect, so the slot is Reset
+  ptr(s.canvas, 'pointerup', 50 * K, 900 * K);
+  expect(s.reset.textContent).toBe('Reset');
   s.reset.click();
   expect(s.count(0)).toBe('2');
   expect(errors).toEqual([]);
@@ -132,7 +134,7 @@ test('While flying, the Reset slot cycles the flight speed', () => {
   const seen = [1, 2, 3, 4].map(() => (s.reset.click(), s.reset.textContent));
   expect(seen).toEqual(['Speed 2×', 'Speed 4×', 'Speed ½×', 'Speed 1×']);
   s.launch.click(); // Stop
-  expect(s.reset.textContent).toBe('Reset');
+  expect(s.reset.textContent).toBe('Remove'); // the moon is still selected
 });
 
 test('Classroom mode offers the solution on an empty sky; students never see it', () => {
@@ -158,17 +160,26 @@ test('Classroom mode offers the solution on an empty sky; students never see it'
   expect(s.reset.textContent).toBe('Solution');
 });
 
-test('Selecting a placed body shows ✕ Remove, which sends it back to the tray', () => {
+test('While a placed body is selected the slot is a red Remove, which sends it back to the tray', () => {
   const s = setup(1);
   trayDrop(s, 0, 360, 250);
-  expect(s.remove.hidden).toBe(false); // a dropped body is selected
-  s.remove.click();
+  expect(s.reset.textContent).toBe('Remove'); // a dropped body is selected
+  expect(s.reset.className).toBe('btn-danger');
+  expect(s.stage.querySelector('.gv-sky button')).toBeNull(); // nothing inside the playing area
+  s.reset.click();
   expect(s.count(0)).toBe('2');
-  expect(s.remove.hidden).toBe(true);
+  expect(s.reset.textContent).toBe('Reset');
+  expect(s.reset.className).toBe('btn-ghost');
   trayDrop(s, 0, 360, 250);
+  trayDrop(s, 0, 600, 420);
   ptr(s.canvas, 'pointerdown', 50 * K, 900 * K); // tap empty sky: deselect
   ptr(s.canvas, 'pointerup', 50 * K, 900 * K);
-  expect(s.remove.hidden).toBe(true);
+  expect(s.reset.textContent).toBe('Reset');
+  ptr(s.canvas, 'pointerdown', 360 * K, 250 * K); // tap a body: select it
+  ptr(s.canvas, 'pointerup', 360 * K, 250 * K);
+  expect(s.reset.textContent).toBe('Remove');
+  s.reset.click();
+  expect(s.count(0)).toBe('1');
 });
 
 /** Flies level 01's solution at a playback speed, one 16.7 ms frame at a time (with an occasional long stall). */
@@ -208,6 +219,18 @@ test('The flight speed changes only the watching: every speed, with or without s
     expect(calls[0][0]).toBe(3);
   }
   expect(new Set(runs.map((c) => JSON.stringify(c)))).toHaveProperty('size', 1);
+});
+
+test('Retry with this setup reopens the level with the placements from the last win', () => {
+  flyLevel01('1×', false); // wins level 01 with the moon at the reference spot
+  const fresh = setup(0);
+  expect(fresh.count(0)).toBe('1'); // a normal start is empty
+  dispose?.();
+  document.body.replaceChildren();
+  vi.restoreAllMocks();
+  const kept = setup(0, false, true);
+  expect(kept.count(0)).toBe('0'); // the moon is back where it was
+  expect(kept.reset.textContent).toBe('Reset');
 });
 
 test('The Levels button leaves for the level select', () => {
