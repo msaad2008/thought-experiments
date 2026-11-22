@@ -146,6 +146,16 @@ function expected(i: number, lever: number, ups: ReadonlySet<string> = NONE, rip
 
 const delivered = (s: S) => () => s.status().startsWith('Delivered');
 
+/** Which parts of the panel are on show (jsdom has no layout: the `hidden` attributes). */
+const shown = (s: S) => {
+  const on = (sel: string) => !s.stage.querySelector<HTMLElement>(sel)!.hidden;
+  return {
+    hint: on('.gv-hint'), trip: on('.ar-trip'), marks: on('.ar-marks'),
+    clocks: on('.ar-clocks'), speed: on('.ar-speed'), news: on('.ar-news'),
+  };
+};
+const LIVE = { hint: false, trip: false, marks: true, clocks: true, speed: true, news: true };
+
 test('the brief shows the trip, the marks and the lever at 0.5c', () => {
   const s = setup(L02);
   const brief = [...s.stage.querySelectorAll('.ar-brief p')].map((p) => p.textContent);
@@ -155,6 +165,8 @@ test('the brief shows the trip, the marks and the lever at 0.5c', () => {
   ]);
   expect(s.hint.textContent).toBe(s.level.hint);
   expect(s.hint.hidden).toBe(false);
+  // Phones: before launch the clocks, speed and news (all zero) make way for the trip and the hint.
+  expect(shown(s)).toEqual({ hint: true, trip: true, marks: true, clocks: false, speed: false, news: false });
   expect([s.lever.min, s.lever.max, s.lever.step, s.lever.value]).toEqual(['0', '1000', '1', START(L02)]);
   expect(s.lever.getAttribute('aria-valuetext')).toBe('0.50 c, gamma 1.15');
   expect(s.lever.getAttribute('aria-label')).toBe('Cruise speed');
@@ -311,8 +323,8 @@ test('too slow ends as Too late, with Try again', () => {
   const late = "Too late: by the colony's clocks, the deadline was year 28.7.";
   expect(s.status()).toBe(late);
   expect(s.toast.textContent).toBe(late);
-  expect(s.hint.hidden).toBe(false);
-  expect(s.hint.textContent).toBe(late);
+  expect(shown(s)).toEqual(LIVE); // the panel keeps its flight shape
+  expect(document.activeElement).toBe(s.primary); // Try again
   const year = parseFloat(s.clocks()[1].slice(5));
   expect(year).toBeGreaterThan(28.7);
   expect(year).toBeLessThan(28.9);
@@ -325,7 +337,10 @@ test('too slow ends as Too late, with Try again', () => {
   expect(s.clocks()).toEqual(frozen);
   vi.advanceTimersByTime(10000);
   expect(s.complete).not.toHaveBeenCalled();
+  expect(s.toast.classList.contains('on')).toBe(true); // the reason stays on show until Try again
   click(s.primary); // Try again: the brief, the same lever
+  expect(s.toast.classList.contains('on')).toBe(false);
+  expect(shown(s)).toEqual({ hint: true, trip: true, marks: true, clocks: false, speed: false, news: false });
   expect(s.primary.textContent).toBe('Launch');
   expect(s.primary.disabled).toBe(false);
   expect(s.lever.value).toBe('0');
@@ -336,7 +351,44 @@ test('too slow ends as Too late, with Try again', () => {
   const sc = look();
   expect(sc.phase).toBe('brief');
   expect(sc.ship).toEqual(AT_REST);
+  click(s.primary);
+  expect(s.middle.textContent).toBe('Speed 1×'); // Try again resets the playback speed
   expect(errors).toEqual([]);
+});
+
+test('once launched, the panel shows the clocks and the lever has the focus', () => {
+  const s = setup(L02, { classroom: true, upgrades: ['predictor'] });
+  expect(s.stage.querySelector('.gv-panel')!.classList.contains('ar-live')).toBe(false);
+  click(s.primary);
+  expect(shown(s)).toEqual(LIVE);
+  expect(s.stage.querySelector('.gv-panel')!.classList.contains('ar-live')).toBe(true);
+  expect(s.text('.ar-earth-clock .ar-clock-caption')).toBe('the clock you are passing'); // still there, said plainly
+  expect(document.activeElement).toBe(s.lever);
+  step(60);
+  expect(shown(s)).toEqual(LIVE);
+  setLever(s, 1000);
+  until(() => s.status().startsWith('Arrived'));
+  expect(shown(s)).toEqual(LIVE); // ripening
+  until(delivered(s));
+  expect(shown(s)).toEqual(LIVE); // done
+});
+
+test('the trip home takes about RETURN_SECONDS however the lever moves', () => {
+  for (const to of [0, 1000]) {
+    const s = setup(L07, { classroom: true });
+    click(s.middle);
+    click(s.primary);
+    until(delivered(s));
+    step(60); // a second of the trip home
+    setLever(s, to);
+    const frames = 60 + until(() => s.status().startsWith('Home'));
+    expect(frames).toBeGreaterThan(5 * 60 - 5);
+    expect(frames).toBeLessThan(5 * 60 + 5);
+    expect(look().ship.x).toBe(s.level.distance);
+    vi.advanceTimersByTime(1200);
+    expect(s.complete).toHaveBeenCalledWith(3, expect.stringContaining('Your twin on Earth aged'));
+    fresh();
+  }
 });
 
 test('the lever works mid-flight', () => {
@@ -557,7 +609,7 @@ test('reduced motion: the flight still plays, with no twinkle', () => {
   expect(s.clocks()[0]).not.toBe('0.00 yr');
 });
 
-test('the sky is re-fitted when the panel changes height, but never in flight', () => {
+test('the sky is re-fitted when the panel changes height, once at launch, but never in flight', () => {
   const s = setup(L02);
   const panel = s.stage.querySelector('.gv-panel')!;
   let h = 300;
@@ -568,11 +620,13 @@ test('the sky is re-fitted when the panel changes height, but never in flight', 
   expect(n).toBeGreaterThan(0);
   setLever(s, 310); // same height: no re-fit
   expect(fits()).toBe(n);
-  h = 250; // the hint hides at launch
+  h = 250; // the panel changes shape at launch
   click(s.primary);
+  expect(fits()).toBe(n + 1);
+  h = 260;
   setLever(s, 320);
   step(30);
-  expect(fits()).toBe(n);
+  expect(fits()).toBe(n + 1); // not mid-flight
   click(s.middle);
-  expect(fits()).toBe(n);
+  expect(fits()).toBe(n + 1);
 });

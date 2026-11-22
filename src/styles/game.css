@@ -690,17 +690,30 @@ button.cta:disabled {
   white-space: nowrap;
 }
 
-/* Antidote Run: the trip brief, the two clocks, speed and culture, the colony's news, the lever,
-   the Arrival predictor. Compact, so the busiest panel fits under the sky on a 360 × 640 phone. */
+/* Antidote Run. Phones: the busiest panel (classroom, Arrival predictor) fits a 360 × 640 screen under
+   the 200 px sky with no scroll. The brief shows the hint, the trip, the marks, the lever and the predictor;
+   once launched (.ar-live) the hint and the trip line make way for the clocks, speed and news, each a
+   fixed height so nothing grows mid-flight. */
 .ar-panel {
-  gap: 8px;
+  gap: 6px;
+}
+
+.ar-panel .gv-hint {
+  font-size: 15px;
+  line-height: 1.35;
 }
 
 .ar-brief p {
   margin: 0;
   color: var(--text-2);
-  font-size: 15px;
-  line-height: 1.35;
+  font-size: 14px;
+  line-height: 1.3;
+}
+
+.ar-marks {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .ar-clocks {
@@ -709,34 +722,47 @@ button.cta:disabled {
   gap: 8px;
 }
 
+.ar-clocks[hidden],
+.ar-speed[hidden],
+.ar-news[hidden] {
+  display: none;
+}
+
 .ar-clock {
   display: flex;
   flex-direction: column;
-  padding: 6px 10px;
+  min-width: 0;
+  padding: 3px 10px;
   border: 1px solid rgb(255 255 255 / 0.1);
-  border-radius: 12px;
+  border-radius: 10px;
   background: rgb(255 255 255 / 0.04);
 }
 
-.ar-clock-label {
+.ar-clock-label,
+.ar-clock-caption {
+  overflow: hidden;
   color: var(--text-2);
-  font-size: 14px;
+  font-size: 12px;
+  line-height: 1.2;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .ar-clock-value {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  line-height: 1.25;
+  line-height: 1.2;
 }
 
 .ar-earth-clock .ar-clock-value {
   color: var(--gold);
 }
 
-.ar-clock-caption {
-  color: var(--text-2);
-  font-size: 13px;
+/* The Ship block has no caption: an empty line keeps the two blocks the same height. */
+.ar-ship-clock::after {
+  content: '\a0';
+  font-size: 12px;
   line-height: 1.2;
 }
 
@@ -744,30 +770,26 @@ button.cta:disabled {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  font-size: 16px;
+  gap: 10px;
+  font-size: 15px;
+  line-height: 1.25;
   font-variant-numeric: tabular-nums;
-}
-
-.ar-speed-text {
   white-space: nowrap;
 }
 
 .ar-culture-box {
   display: flex;
-  flex: 1;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 3px;
+  align-items: center;
+  gap: 8px;
   min-width: 0;
-  font-size: 14px;
   color: var(--text-2);
+  font-size: 13px;
 }
 
 .ar-bar {
   display: block;
-  width: 100%;
-  max-width: 160px;
+  flex: none;
+  width: 56px;
   height: 6px;
   border-radius: 999px;
   background: rgb(255 255 255 / 0.12);
@@ -781,26 +803,31 @@ button.cta:disabled {
   background: #4cc38a;
 }
 
-/* One line kept for the news, so the panel does not jump when the first one arrives. */
+/* Always two lines tall, never more: the panel does not move when news arrives. */
 .ar-news {
-  min-height: 1.35em;
+  display: -webkit-box;
+  height: 2.5em;
   margin: 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   color: var(--gold);
-  font-size: 15px;
-  line-height: 1.35;
+  font-size: 13px;
+  line-height: 1.25;
 }
 
 .ar-lever {
   display: flex;
   flex-direction: column;
-  gap: 2px;
 }
 
 .ar-lever-head {
   display: flex;
   justify-content: space-between;
   color: var(--text-2);
-  font-size: 15px;
+  font-size: 14px;
+  line-height: 1.3;
 }
 
 .ar-lever-value {
@@ -831,11 +858,16 @@ button.cta:disabled {
 .ar-predictor svg {
   display: block;
   width: 100%;
-  height: 64px;
+  height: 56px;
+}
+
+.ar-live .ar-predictor svg {
+  height: 44px;
 }
 
 @media (min-width: 900px) {
-  .ar-predictor svg {
+  .ar-predictor svg,
+  .ar-live .ar-predictor svg {
     height: 110px;
   }
 }

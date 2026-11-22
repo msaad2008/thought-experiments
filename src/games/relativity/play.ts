@@ -53,6 +53,8 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
   let R = ripenTime(level, ups);
   let ripeRate = 0;
   let homeRate = 0;
+  /** Real seconds of the trip home played so far (at playback speed). */
+  let homeElapsed = 0;
   let deliveredYear = 0;
   const received = new Set<number>();
   let pinnedNews: string | null = null;
@@ -82,9 +84,9 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
   const panel = el('div', 'gv-panel ar-panel');
   const hint = el('p', 'gv-hint', level.hint);
   const brief = el('div', 'ar-brief');
-  const tripLine = el('p', '');
+  const tripLine = el('p', 'ar-trip');
   const [two, three] = level.marks;
-  brief.append(tripLine, el('p', '', `Deadline year ${level.deadline.toFixed(1)} · ★★ by ${two.toFixed(1)} · ★★★ by ${three.toFixed(1)}`));
+  brief.append(tripLine, el('p', 'ar-marks', `Deadline year ${level.deadline.toFixed(1)} · ★★ by ${two.toFixed(1)} · ★★★ by ${three.toFixed(1)}`));
 
   const clocks = el('div', 'ar-clocks');
   const clock = (cls: string, label: string, caption?: string) => {
@@ -124,6 +126,7 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
   lever.addEventListener('input', () => {
     if (phase === 'done' || phase === 'late') return;
     value = Number(lever.value);
+    if (phase === 'return') homeRate = returnRate();
     changed();
   });
   leverRow.append(leverHead, lever);
@@ -161,12 +164,13 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
   const earthYear = () => ship.t + (home?.t ?? 0);
   const shipYears = () => ship.tau + (home?.tau ?? 0);
 
-  function showToast(text: string): void {
+  /** `stay`: the toast stays until the next change of phase (Too late: the panel has no room for it). */
+  function showToast(text: string, stay = false): void {
     say(text);
     toast.textContent = text;
     toast.classList.add('on');
     clearTimeout(toastTimer);
-    toastTimer = window.setTimeout(() => toast.classList.remove('on'), TOAST_MS);
+    if (!stay) toastTimer = window.setTimeout(() => toast.classList.remove('on'), TOAST_MS);
   }
 
   /** The numbers that move every frame. */
@@ -182,6 +186,12 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
   }
 
   function changed(): void {
+    // Phones: the brief shows the trip and the lever; once launched, the trip line and the hint
+    // make way for the clocks, speed and news (all zero before launch), so the panel fits under the sky.
+    const briefing = phase === 'brief';
+    panel.classList.toggle('ar-live', !briefing);
+    hint.hidden = tripLine.hidden = !briefing;
+    clocks.hidden = speedRow.hidden = news.hidden = briefing;
     const live = phase !== 'done' && phase !== 'late';
     lever.value = String(value);
     lever.disabled = !live;
@@ -259,9 +269,10 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
     if (phase !== 'brief') return;
     launchValue = value;
     phase = 'flight';
-    hint.hidden = true;
     toast.classList.remove('on');
     changed();
+    fit(); // the panel changed shape: re-fit once now, never mid-flight
+    lever.focus({ preventScroll: true }); // the lever is the control in flight (Launch is now disabled)
     say('Launched.');
   }
 
@@ -279,9 +290,8 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
     if (phase !== 'late') return;
     reset();
     value = launchValue;
+    speedIx = 1;
     phase = 'brief';
-    hint.textContent = level.hint;
-    hint.hidden = false;
     toast.classList.remove('on');
     changed();
   }
@@ -307,15 +317,23 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
   function tooLate(): boolean {
     if (earthYear() <= level.deadline) return false;
     phase = 'late';
-    const text = `Too late: by the colony's clocks, the deadline was year ${level.deadline.toFixed(1)}.`;
-    hint.textContent = text;
-    hint.hidden = false;
     changed();
-    showToast(text);
+    showToast(`Too late: by the colony's clocks, the deadline was year ${level.deadline.toFixed(1)}.`, true);
+    primary.focus({ preventScroll: true }); // Try again
     return true;
   }
 
   const ripeningRate = () => Math.max(yearsPerSec, (R - ship.tau) / RIPEN_MAX_SECONDS);
+
+  /**
+   * Ship years per real second on the way home: the rest of the trip home (at the current lever) over
+   * the rest of its RETURN_SECONDS, so it plays in about that long however the lever moves.
+   */
+  function returnRate(): number {
+    const from = home ?? AT_REST;
+    const left = advance(from, course, leverEta(), Infinity).tau - from.tau;
+    return left / Math.max(RETURN_SECONDS - homeElapsed, 0.5);
+  }
 
   function arrive(): void {
     if (ship.tau >= R) return deliver();
@@ -339,7 +357,8 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
     if (level.roundTrip) {
       phase = 'return';
       home = AT_REST;
-      homeRate = advance(AT_REST, course, leverEta(), Infinity).tau / RETURN_SECONDS;
+      homeElapsed = 0;
+      homeRate = returnRate();
       changed();
       showToast(text);
       return;
@@ -380,6 +399,7 @@ export function startLevel(index: number, ctx: LevelContext): () => void {
       if (ship.tau >= R) deliver();
     } else if (phase === 'return' && home) {
       home = advance(home, course, leverEta(), dt * homeRate);
+      homeElapsed += dt;
       if (docked(home, course)) arriveHome();
     }
   }
