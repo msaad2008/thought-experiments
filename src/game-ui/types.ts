@@ -17,6 +17,8 @@ export interface LevelContext {
   upgrades: ReadonlySet<string>;
   /** Classroom mode: a teacher is driving, so a game may offer extras such as showing a solution. */
   classroom: boolean;
+  /** Reopen the level as the player left it after their last try ("Retry with this setup"). */
+  keepSetup: boolean;
   /** Shows the level end; mount records progress and tracks it. */
   complete(stars: number, insight: string): void;
   /** Leaves the level for the level select. */

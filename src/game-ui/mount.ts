@@ -219,7 +219,7 @@ export function mountGame(cfg: GameConfig, root: HTMLElement): void {
     show(view);
   }
 
-  function play(index: number): void {
+  function play(index: number, keepSetup = false): void {
     const view = el('section', 'view play');
     const stage = el('div', 'stage');
     view.append(stage);
@@ -229,6 +229,7 @@ export function mountGame(cfg: GameConfig, root: HTMLElement): void {
       stage,
       upgrades: ownedUpgrades(cfg.upgrades, progress, classroom),
       classroom,
+      keepSetup,
       levels: () => showSelect(),
       complete(starCount, insight) {
         if (classroom) {
@@ -253,8 +254,10 @@ export function mountGame(cfg: GameConfig, root: HTMLElement): void {
     const actions = el('div', 'actions');
     const hasNext = index < cfg.levels.length - 1;
     if (hasNext) actions.append(button('Next', 'cta', () => play(index + 1)));
+    // Short of 3 stars: offer to go back with the same placements and adjust them.
+    if (n < 3) actions.append(button('Retry with this setup', 'btn-ghost', () => play(index, true)));
     actions.append(
-      button('Retry', 'btn-ghost', () => play(index)),
+      button(n < 3 ? 'Start over' : 'Retry', 'btn-ghost', () => play(index)),
       button('Levels', hasNext ? 'btn-ghost' : 'cta', () => showSelect()),
     );
     view.append(actions);
