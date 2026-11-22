@@ -637,6 +637,15 @@ button.cta:disabled {
   }
 }
 
+/* The Spread graph (when owned) and the shot dots share one line. */
+.uc-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px 12px;
+}
+
 /* Five shots: hollow until fired, gold for a hit, a struck-through dot for a miss. */
 .uc-shots {
   display: flex;

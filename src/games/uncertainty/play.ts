@@ -62,6 +62,8 @@ export function startLevel(index: number, ctx: LevelContext, rng: () => number =
   let toastTimer = 0;
   let resultTimer = 0;
   let shownGraphDx: number | null = null;
+  /** The panel height the sky was last fitted to. */
+  let fittedPanelH = -1;
 
   // ----- DOM -----
   const root = el('div', 'gv');
@@ -132,7 +134,9 @@ export function startLevel(index: number, ctx: LevelContext, rng: () => number =
   actions.append(primary, middle, levelsBtn);
   const status = el('p', 'sr-only');
   status.setAttribute('aria-live', 'polite');
-  panel.append(hint, setting, readout, ...(graphBox ? [graphBox] : []), dots, actions, status);
+  const graphRow = el('div', 'uc-row'); // the graph and the shot dots share a line, to save height on phones
+  graphRow.append(...(graphBox ? [graphBox] : []), dots);
+  panel.append(hint, setting, readout, graphRow, actions, status);
   root.append(sky, panel);
   ctx.stage.replaceChildren(root);
 
@@ -184,10 +188,17 @@ export function startLevel(index: number, ctx: LevelContext, rng: () => number =
     middle.textContent = offerSolution ? 'Solution' : 'Change setting';
     middle.disabled = !offerSolution && phase !== 'aim';
     levelsBtn.disabled = finished; // the level end is on its way
+    // The panel grows or shrinks (readout lines, the hint hiding): re-fit the sky to it, but never
+    // while aiming or in flight, so the sky does not jump under the reticle.
+    if (phase !== 'aim' && phase !== 'flight' && panel.getBoundingClientRect().height !== fittedPanelH) fit();
     if (reduced) draw(); // with reduced motion an idle sky is not redrawn every frame
   }
 
-  const fit = () => fitSky(root, sky);
+  /** Phones: the sky and the panel fit the viewport height without scrolling. */
+  function fit(): void {
+    fitSky(root, sky);
+    fittedPanelH = panel.getBoundingClientRect().height;
+  }
 
   function onWindowResize(): void {
     fit();

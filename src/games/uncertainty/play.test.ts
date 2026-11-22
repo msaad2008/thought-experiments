@@ -2,8 +2,10 @@
 // The Uncertain Fire play view: set → aim → flight → result, five shots a level.
 import { test, expect, beforeEach, afterEach, vi } from 'vitest';
 
+vi.mock('../../game-ui/fit', () => ({ fitSky: vi.fn() }));
 vi.mock('./render', async (importOriginal) => ({ ...(await importOriginal<typeof import('./render')>()), drawScene: vi.fn() }));
 
+import { fitSky } from '../../game-ui/fit';
 import { drawScene, type Scene } from './render';
 import { startLevel } from './play';
 import { LEVELS, massKg } from './levels';
@@ -28,6 +30,7 @@ beforeEach(() => {
   if (!Element.prototype.setPointerCapture) Element.prototype.setPointerCapture = () => {};
   window.addEventListener('error', onError);
   vi.mocked(drawScene).mockClear();
+  vi.mocked(fitSky).mockClear();
   clock = 0;
   next = null;
 });
@@ -513,4 +516,29 @@ test('the Levels button leaves for the level select', () => {
   expect(s.levelsBtn.textContent).toBe('Levels');
   s.levelsBtn.click();
   expect(s.levels).toHaveBeenCalledTimes(1);
+});
+
+test('the sky is re-fitted when the panel changes height, but never while aiming or in flight', () => {
+  const s = setup(0, { rng: () => 0 });
+  const panel = s.stage.querySelector('.gv-panel')!;
+  let h = 300;
+  vi.spyOn(panel, 'getBoundingClientRect').mockImplementation(() => new DOMRect(0, 0, 328, h));
+  const fits = () => vi.mocked(fitSky).mock.calls.length;
+  s.radios[1].click(); // the readout grows a line
+  let n = fits();
+  expect(n).toBeGreaterThan(0);
+  s.radios[0].click(); // same height: no re-fit
+  expect(fits()).toBe(n);
+  h = 324;
+  s.radios[1].click();
+  expect(fits()).toBe(n + 1);
+  n = fits();
+  s.primary.click(); // Measure
+  aimAt(s, s.centre(0));
+  h = 200; // the hint hides at Fire
+  s.primary.click();
+  step(10);
+  expect(fits()).toBe(n); // not while aiming or in flight
+  fly(s);
+  expect(fits()).toBe(n + 1); // the result shows: the sky grows back
 });
